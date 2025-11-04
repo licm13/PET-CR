@@ -118,100 +118,79 @@ def calculate_slope_svp(temperature: ArrayLike) -> ArrayLike:
     return 4098.0 * es / ((temperature + 237.3) ** 2)
 
 
-def calculate_psychrometric_constant(pressure: ArrayLike, 
+def calculate_psychrometric_constant(pressure: ArrayLike,
                                      specific_heat: float = 1013.0,
                                      latent_heat: float = 2.45e6,
                                      mw_ratio: float = 0.622) -> ArrayLike:
-    """
-    Calculate the psychrometric constant.
-    
-    Parameters
-    ----------
-    pressure : float or array_like
-        Atmospheric pressure [Pa]
+    """Compute the psychrometric constant.
+
+    计算干湿表常数，用于连接能量项和空气动力学项。
+
+    Parameters 参数
+    -------------
+    pressure : float or np.ndarray
+        Atmospheric pressure in pascals (Pa).
+        大气压强，单位帕。
     specific_heat : float, optional
-        Specific heat of air at constant pressure [J kg⁻¹ K⁻¹]. 
-        Default is 1013.0 J kg⁻¹ K⁻¹.
+        Specific heat of air at constant pressure [J kg⁻¹ K⁻¹], default 1013.0.
+        定压比热，默认1013.0 J kg⁻¹ K⁻¹。
     latent_heat : float, optional
-        Latent heat of vaporization [J kg⁻¹]. 
-        Default is 2.45e6 J kg⁻¹ (at 20°C).
+        Latent heat of vaporization [J kg⁻¹], default 2.45e6.
+        汽化潜热，默认值2.45e6 J kg⁻¹ (约20°C)。
     mw_ratio : float, optional
-        Ratio of molecular weight of water vapor to dry air [-]. 
-        Default is 0.622.
-    
-    Returns
-    -------
-    float or array_like
-        Psychrometric constant [Pa K⁻¹]
-    
-    Notes
-    -----
-    The psychrometric constant is calculated as:
-    
-    .. math::
-        \\gamma = \\frac{c_p P}{\\varepsilon \\lambda}
-    
-    where:
-    - c_p is the specific heat of air at constant pressure
-    - P is atmospheric pressure
-    - ε is the ratio of molecular weights (water vapor / dry air)
-    - λ is the latent heat of vaporization
-    
-    References
+        Molecular weight ratio of water vapour to dry air [-], default 0.622.
+        水汽与干空气的分子量比，默认0.622。
+
+    Returns 返回
     ----------
-    .. [1] Allen et al. (1998) FAO-56, Equation 8
-    
-    Examples
-    --------
-    >>> calculate_psychrometric_constant(101325.0)
-    66.77...
-    >>> calculate_psychrometric_constant(np.array([80000, 101325]))
-    array([52.71..., 66.77...])
+    float or np.ndarray
+        Psychrometric constant in Pa K⁻¹.
+        干湿表常数，单位Pa K⁻¹。
+
+    Notes 说明
+    ---------
+    The constant is :math:`\\gamma = c_p P / (\\varepsilon \\lambda)`, linking
+    energy availability to aerodynamic demand in the Penman equation.
+    干湿表常数按 :math:`\\gamma = c_p P / (\\varepsilon \\lambda)` 计算，
+    在Penman方程中连接能量项与空气动力学项。
+
+    References 参考文献
+    -----------------
+    Allen et al. (1998) FAO-56 指南 / Allen等 (1998) FAO-56 Manual.
     """
     return (specific_heat * pressure) / (mw_ratio * latent_heat)
 
 
-def vapor_pressure_deficit(temperature: ArrayLike, 
+def vapor_pressure_deficit(temperature: ArrayLike,
                           relative_humidity: ArrayLike) -> ArrayLike:
-    """
-    Calculate vapor pressure deficit (VPD).
-    
-    Parameters
+    """Calculate vapor pressure deficit (VPD).
+
+    计算饱和水汽压差（VPD），衡量空气干燥程度。
+
+    Parameters 参数
+    -------------
+    temperature : float or np.ndarray
+        Air temperature in degrees Celsius (°C).
+        气温，单位摄氏度。
+    relative_humidity : float or np.ndarray
+        Relative humidity in percent (0-100).
+        相对湿度，百分数表示（0-100）。
+
+    Returns 返回
     ----------
-    temperature : float or array_like
-        Air temperature [°C]
-    relative_humidity : float or array_like
-        Relative humidity [%] (0-100 range)
-    
-    Returns
-    -------
-    float or array_like
-        Vapor pressure deficit [Pa]
-    
-    Notes
-    -----
-    VPD is calculated as:
-    
-    .. math::
-        VPD = e_s(T) \\left(1 - \\frac{RH}{100}\\right)
-    
-    where:
-    - e_s(T) is the saturation vapor pressure at temperature T
-    - RH is relative humidity in %
-    
-    VPD represents the difference between the amount of moisture in the air 
-    and how much moisture the air can hold when saturated.
-    
-    References
-    ----------
-    .. [1] Allen et al. (1998) FAO-56
-    
-    Examples
-    --------
-    >>> vapor_pressure_deficit(20.0, 50.0)
-    1168.54...
-    >>> vapor_pressure_deficit(np.array([20, 25]), np.array([50, 60]))
-    array([1168.54..., 1269.96...])
+    float or np.ndarray
+        Vapor pressure deficit in pascals (Pa).
+        饱和水汽压差，单位帕。
+
+    Notes 说明
+    ---------
+    Computed using :math:`VPD = e_s(T) (1 - RH/100)`, the deficit increases as
+    air becomes drier, indicating higher evaporative demand.
+    按 :math:`VPD = e_s(T) (1 - RH/100)` 计算，空气越干燥缺额越大，表明蒸发需求越强。
+
+    References 参考文献
+    -----------------
+    Allen et al. (1998) FAO-56 指南 / Allen等 (1998) FAO-56 Manual.
     """
     es = calculate_saturation_vapor_pressure(temperature)
     return es * (1.0 - relative_humidity / 100.0)
