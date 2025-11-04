@@ -69,26 +69,25 @@ def sigmoid_cr(ep: ArrayLike,
     The sigmoid CR model is expressed as:
     
     .. math::
-        E_a = E_w \\cdot \\left[1 + \\left(\\frac{E_p}{E_w}\\right)^\\beta\\right]^{-1/\\beta}
+        y = \\frac{E_p}{E_w}
+        
+    .. math::
+        E_a = E_w \\cdot \\frac{1}{\\left[1 + (y-1)^\\beta\\right]^{1/\\beta}}
     
     where:
     - E_a is actual evapotranspiration
     - E_w is wet-environment evapotranspiration (typically Priestley-Taylor)
     - E_p is potential evapotranspiration (typically Penman)
     - β is the shape parameter
+    - y is the dimensionless dryness index
     
-    Alternative formulation using the complementary evaporation (Epc):
+    This formulation ensures that:
+    - When y = 1 (Ep = Ew): Ea = Ew (equilibrium condition)
+    - When y < 1 (Ep < Ew): Ea approaches Ew (wet conditions)
+    - When y > 1 (Ep > Ew): Ea < Ew (dry conditions)
     
-    .. math::
-        E_{pc} = 2E_w - E_a
-        
-    .. math::
-        x = E_p / E_w
-        
-    .. math::
-        E_a = E_w \\cdot \\frac{2}{1 + x^\\beta}^{1/\\beta}
-    
-    The model reduces to the symmetric Bouchet (1963) model when β → 0.
+    The model provides a smooth sigmoid transition between wet and dry extremes,
+    with β controlling the steepness of this transition.
     
     Physical Interpretation
     -----------------------
@@ -148,13 +147,30 @@ def sigmoid_cr(ep: ArrayLike,
     ep = np.maximum(ep, 0.0)
     ew = np.maximum(ew, 1e-6)  # Avoid division by zero
     
-    # Calculate dimensionless ratio
-    x = ep / ew
+    # Calculate dimensionless dryness index
+    y = ep / ew
     
-    # Sigmoid CR formulation (using complementary form)
-    # From Han & Tian (2018): Ea = Ew * 2 / [1 + x^β]^(1/β)
-    # This ensures: Ea = Ew when x=1, and Ea decreases as x increases
-    ea = ew * 2.0 / np.power(1.0 + np.power(x, beta), 1.0/beta)
+    # Sigmoid CR formulation
+    # Ea = Ew / [1 + (y-1)^β]^(1/β)
+    # This ensures Ea = Ew when y = 1 (Ep = Ew)
+    
+    # For numerical stability, handle y ≈ 1 case
+    deviation = y - 1.0
+    
+    # When |deviation| is very small, Ea ≈ Ew
+    small_dev = np.abs(deviation) < 1e-10
+    
+    if np.isscalar(y):
+        if small_dev:
+            ea = ew
+        else:
+            ea = ew / np.power(1.0 + np.power(np.abs(deviation), beta), 1.0/beta)
+    else:
+        ea = np.where(
+            small_dev,
+            ew,
+            ew / np.power(1.0 + np.power(np.abs(deviation), beta), 1.0/beta)
+        )
     
     # Ensure Ea doesn't exceed Ew (physical constraint)
     ea = np.minimum(ea, ew)
