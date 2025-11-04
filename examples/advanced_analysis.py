@@ -20,7 +20,8 @@ Note: For plotting functionality, install matplotlib: pip install matplotlib
 """
 
 import numpy as np
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
+from pathlib import Path
 
 try:
     from petcr import (
@@ -41,9 +42,51 @@ except ImportError:
 # 尝试导入matplotlib用于可视化 / Try to import matplotlib for visualization
 try:
     import matplotlib.pyplot as plt
+    from matplotlib import font_manager
+    import os
+    from pathlib import Path
     PLOTTING_AVAILABLE = True
+
+    def _setup_chinese_font():
+        """配置 Matplotlib 以支持中文显示并避免负号显示为方块。
+        Configure Matplotlib to support Chinese rendering and proper minus signs.
+        """
+        try:
+            available_fonts = {f.name for f in font_manager.fontManager.ttflist}
+            # 常见中文字体优先级 / Common Chinese fonts priority list
+            candidates = [
+                'SimHei',               # 黑体 (Windows 常见)
+                'Microsoft YaHei',      # 微软雅黑 (Windows)
+                'Noto Sans CJK SC',     # Noto 思源黑体
+                'Source Han Sans SC',   # 思源黑体 SC
+                'PingFang SC',          # macOS
+                'WenQuanYi Zen Hei',    # Linux
+            ]
+
+            chosen = None
+            for name in candidates:
+                if name in available_fonts:
+                    chosen = name
+                    break
+
+            if chosen is not None:
+                plt.rcParams['font.sans-serif'] = [chosen]
+            else:
+                # 回退到兼容列表，尽量保证显示 / Fallback list
+                plt.rcParams['font.sans-serif'] = candidates + ['Arial Unicode MS']
+
+            # 确保负号正常显示 / Ensure minus sign displays correctly
+            plt.rcParams['axes.unicode_minus'] = False
+        except Exception:
+            # 静默失败，保持默认设置 / Silent fail, keep defaults
+            plt.rcParams['axes.unicode_minus'] = False
+
+    # 初始化字体设置 / Initialize font settings once
+    _setup_chinese_font()
+
 except ImportError:
     PLOTTING_AVAILABLE = False
+    plt = None  # type: ignore[assignment]
     print("警告: matplotlib未安装，将跳过绘图功能")
     print("Warning: matplotlib not installed, plotting will be skipped")
     print("安装命令 / Install with: pip install matplotlib\n")
@@ -446,7 +489,8 @@ def plot_results(scenarios: Dict, all_results: Dict, sensitivity_results: Dict):
         # 简化标签 / Simplify labels
         labels.append(scenario_name.split('/')[0].strip())
 
-    bp = ax5.boxplot(box_data, labels=labels)
+    bp = ax5.boxplot(box_data)
+    ax5.set_xticklabels(labels)
     ax5.set_ylabel('Ea (W/m²)', fontsize=10)
     ax5.set_title('实际蒸散发分布对比 (Sigmoid β=0.5)\n' +
                  'Actual ET Distribution Comparison', fontsize=11)
@@ -470,11 +514,20 @@ def plot_results(scenarios: Dict, all_results: Dict, sensitivity_results: Dict):
 
     plt.tight_layout()
 
-    # 保存图片 / Save figure
-    output_file = 'petcr_advanced_analysis.png'
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
-    print(f"图表已保存到: {output_file}")
-    print(f"Figure saved to: {output_file}")
+    # 保存图片到 examples/figures 目录 / Save figure to examples/figures
+    try:
+        figures_dir = Path(__file__).parent / 'figures'
+        figures_dir.mkdir(parents=True, exist_ok=True)
+        output_file = figures_dir / 'petcr_advanced_analysis.png'
+        plt.savefig(str(output_file), dpi=300, bbox_inches='tight')
+        print(f"图表已保存到: {output_file}")
+        print(f"Figure saved to: {output_file}")
+    except Exception as e:
+        # 回退到当前工作目录 / Fallback to CWD if path fails
+        output_file = 'petcr_advanced_analysis.png'
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+        print(f"(回退) 图表已保存到当前目录: {output_file}")
+        print(f"(Fallback) Figure saved to current directory: {output_file}")
     print()
 
     # 显示图表 / Show plot
