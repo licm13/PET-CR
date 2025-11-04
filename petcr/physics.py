@@ -1,26 +1,30 @@
 """
+蒸散发估算的物理计算模块
 Physical calculations for evapotranspiration estimation.
 
-This module provides fundamental physical calculations required for 
+本模块提供互补关系(CR)模型所需的基础物理计算，包括：
+This module provides fundamental physical calculations required for
 Complementary Relationship (CR) models, including:
-- Penman potential evapotranspiration (PM)
-- Priestley-Taylor evapotranspiration (PT)
-- Vapor Pressure Deficit (VPD)
-- Psychrometric constant
-- Saturation vapor pressure and its slope
 
+- Penman 潜在蒸散发 (PM) / Penman potential evapotranspiration (PM)
+- Priestley-Taylor 蒸散发 (PT) / Priestley-Taylor evapotranspiration (PT)
+- 饱和水汽压差 (VPD) / Vapor Pressure Deficit (VPD)
+- 干湿表常数 / Psychrometric constant
+- 饱和水汽压及其斜率 / Saturation vapor pressure and its slope
+
+除非另有说明，所有函数使用SI单位
 All functions use SI units unless otherwise specified.
 
-References
+参考文献 / References
 ----------
-.. [1] Penman, H.L. (1948). Natural evaporation from open water, bare soil 
-       and grass. Proceedings of the Royal Society of London. Series A, 
+.. [1] Penman, H.L. (1948). Natural evaporation from open water, bare soil
+       and grass. Proceedings of the Royal Society of London. Series A,
        193(1032), 120-145.
-.. [2] Priestley, C.H.B., & Taylor, R.J. (1972). On the assessment of surface 
-       heat flux and evaporation using large-scale parameters. Monthly Weather 
+.. [2] Priestley, C.H.B., & Taylor, R.J. (1972). On the assessment of surface
+       heat flux and evaporation using large-scale parameters. Monthly Weather
        Review, 100(2), 81-92.
-.. [3] Allen, R.G., Pereira, L.S., Raes, D., & Smith, M. (1998). Crop 
-       evapotranspiration-Guidelines for computing crop water requirements. 
+.. [3] Allen, R.G., Pereira, L.S., Raes, D., & Smith, M. (1998). Crop
+       evapotranspiration-Guidelines for computing crop water requirements.
        FAO Irrigation and drainage paper 56, FAO, Rome, 300(9), D05109.
 """
 
@@ -33,76 +37,84 @@ ArrayLike = Union[float, np.ndarray]
 
 def calculate_saturation_vapor_pressure(temperature: ArrayLike) -> ArrayLike:
     """
+    使用Tetens方程计算饱和水汽压
     Calculate saturation vapor pressure using the Tetens equation.
-    
-    Parameters
+
+    参数 / Parameters
     ----------
     temperature : float or array_like
-        Air temperature [°C]
-    
-    Returns
+        气温 [°C] / Air temperature [°C]
+
+    返回 / Returns
     -------
     float or array_like
-        Saturation vapor pressure [Pa]
-    
-    Notes
+        饱和水汽压 [Pa] / Saturation vapor pressure [Pa]
+
+    说明 / Notes
     -----
+    使用Tetens方程（也称为Murray方程）：
     Uses the Tetens equation (also known as Murray equation):
-    
+
     .. math::
         e_s(T) = 611 \\exp\\left(\\frac{17.27 T}{T + 237.3}\\right)
-    
+
+    其中T为摄氏温度，e_s单位为Pa
     where T is temperature in °C and e_s is in Pa.
-    
-    References
+
+    参考文献 / References
     ----------
     .. [1] Allen et al. (1998) FAO-56, Equation 11
-    
-    Examples
+
+    示例 / Examples
     --------
     >>> calculate_saturation_vapor_pressure(20.0)
     2337.08...
     >>> calculate_saturation_vapor_pressure(np.array([0, 10, 20, 30]))
     array([ 611.21..., 1228.09..., 2337.08..., 4243.50...])
     """
+    # Tetens方程计算饱和水汽压 / Tetens equation for saturation vapor pressure
     return 611.0 * np.exp((17.27 * temperature) / (temperature + 237.3))
 
 
 def calculate_slope_svp(temperature: ArrayLike) -> ArrayLike:
     """
+    计算饱和水汽压曲线的斜率
     Calculate the slope of saturation vapor pressure curve.
-    
-    Parameters
+
+    参数 / Parameters
     ----------
     temperature : float or array_like
-        Air temperature [°C]
-    
-    Returns
+        气温 [°C] / Air temperature [°C]
+
+    返回 / Returns
     -------
     float or array_like
-        Slope of saturation vapor pressure curve [Pa °C⁻¹]
-    
-    Notes
+        饱和水汽压曲线斜率 [Pa °C⁻¹] / Slope of saturation vapor pressure curve [Pa °C⁻¹]
+
+    说明 / Notes
     -----
+    斜率通过Tetens方程的导数计算：
     The slope is computed as the derivative of the Tetens equation:
-    
+
     .. math::
         \\Delta = \\frac{4098 e_s(T)}{(T + 237.3)^2}
-    
-    where T is temperature in °C.
-    
-    References
+
+    其中T为摄氏温度 / where T is temperature in °C.
+
+    参考文献 / References
     ----------
     .. [1] Allen et al. (1998) FAO-56, Equation 13
-    
-    Examples
+
+    示例 / Examples
     --------
     >>> calculate_slope_svp(20.0)
     144.66...
     >>> calculate_slope_svp(np.array([10, 20, 30]))
     array([ 82.24..., 144.66..., 243.49...])
     """
+    # 计算饱和水汽压 / Calculate saturation vapor pressure
     es = calculate_saturation_vapor_pressure(temperature)
+    # 计算斜率 / Calculate slope
     return 4098.0 * es / ((temperature + 237.3) ** 2)
 
 
@@ -211,60 +223,67 @@ def priestley_taylor_et(net_radiation: ArrayLike,
                        pressure: ArrayLike,
                        alpha: float = 1.26) -> ArrayLike:
     """
+    计算Priestley-Taylor潜在蒸散发
     Calculate Priestley-Taylor potential evapotranspiration.
-    
-    Parameters
+
+    参数 / Parameters
     ----------
     net_radiation : float or array_like
-        Net radiation at the surface [W m⁻²]
+        地表净辐射 [W m⁻²] / Net radiation at the surface [W m⁻²]
     ground_heat_flux : float or array_like
-        Ground heat flux [W m⁻²]
+        土壤热通量 [W m⁻²] / Ground heat flux [W m⁻²]
     temperature : float or array_like
-        Air temperature [°C]
+        气温 [°C] / Air temperature [°C]
     pressure : float or array_like
-        Atmospheric pressure [Pa]
+        大气压强 [Pa] / Atmospheric pressure [Pa]
     alpha : float, optional
-        Priestley-Taylor coefficient [-]. Default is 1.26.
-    
-    Returns
+        Priestley-Taylor系数 [-]，默认1.26 / Priestley-Taylor coefficient [-]. Default is 1.26.
+
+    返回 / Returns
     -------
     float or array_like
-        Priestley-Taylor potential evapotranspiration [W m⁻²]
-    
-    Notes
+        Priestley-Taylor潜在蒸散发 [W m⁻²] / Priestley-Taylor potential evapotranspiration [W m⁻²]
+
+    说明 / Notes
     -----
+    Priestley-Taylor方程为：
     The Priestley-Taylor equation is:
-    
+
     .. math::
         ET_{PT} = \\alpha \\frac{\\Delta}{\\Delta + \\gamma} (R_n - G)
-    
-    where:
-    - α is the Priestley-Taylor coefficient (typically 1.26)
-    - Δ is the slope of saturation vapor pressure curve
-    - γ is the psychrometric constant
-    - R_n is net radiation
-    - G is ground heat flux
-    
-    The original Priestley-Taylor coefficient (α = 1.26) was derived for 
+
+    其中 / where:
+    - α 是 Priestley-Taylor系数（通常为1.26）/ is the Priestley-Taylor coefficient (typically 1.26)
+    - Δ 是饱和水汽压曲线斜率 / is the slope of saturation vapor pressure curve
+    - γ 是干湿表常数 / is the psychrometric constant
+    - R_n 是净辐射 / is net radiation
+    - G 是土壤热通量 / is ground heat flux
+
+    原始的Priestley-Taylor系数(α=1.26)是针对充分灌溉、平流效应最小的地表推导的。
+    The original Priestley-Taylor coefficient (α = 1.26) was derived for
     well-watered surfaces under minimal advection conditions.
-    
-    References
+
+    参考文献 / References
     ----------
-    .. [1] Priestley, C.H.B., & Taylor, R.J. (1972). On the assessment of 
-           surface heat flux and evaporation using large-scale parameters. 
+    .. [1] Priestley, C.H.B., & Taylor, R.J. (1972). On the assessment of
+           surface heat flux and evaporation using large-scale parameters.
            Monthly Weather Review, 100(2), 81-92.
-    
-    Examples
+
+    示例 / Examples
     --------
     >>> priestley_taylor_et(500.0, 50.0, 20.0, 101325.0)
     309.48...
     """
+    # 计算饱和水汽压曲线斜率 / Calculate slope of saturation vapor pressure curve
     delta = calculate_slope_svp(temperature)
+    # 计算干湿表常数 / Calculate psychrometric constant
     gamma = calculate_psychrometric_constant(pressure)
-    
+
+    # 可用能量 = 净辐射 - 土壤热通量 / Available energy = net radiation - ground heat flux
     available_energy = net_radiation - ground_heat_flux
+    # Priestley-Taylor方程 / Priestley-Taylor equation
     et_pt = alpha * (delta / (delta + gamma)) * available_energy
-    
+
     return et_pt
 
 
@@ -276,87 +295,93 @@ def penman_potential_et(net_radiation: ArrayLike,
                        pressure: ArrayLike,
                        height: float = 2.0) -> ArrayLike:
     """
+    计算Penman潜在蒸散发
     Calculate Penman potential evapotranspiration.
-    
-    Parameters
+
+    参数 / Parameters
     ----------
     net_radiation : float or array_like
-        Net radiation at the surface [W m⁻²]
+        地表净辐射 [W m⁻²] / Net radiation at the surface [W m⁻²]
     ground_heat_flux : float or array_like
-        Ground heat flux [W m⁻²]
+        土壤热通量 [W m⁻²] / Ground heat flux [W m⁻²]
     temperature : float or array_like
-        Air temperature [°C]
+        气温 [°C] / Air temperature [°C]
     relative_humidity : float or array_like
-        Relative humidity [%] (0-100 range)
+        相对湿度 [%] (0-100范围) / Relative humidity [%] (0-100 range)
     wind_speed : float or array_like
-        Wind speed at height specified [m s⁻¹]
+        指定高度的风速 [m s⁻¹] / Wind speed at height specified [m s⁻¹]
     pressure : float or array_like
-        Atmospheric pressure [Pa]
+        大气压强 [Pa] / Atmospheric pressure [Pa]
     height : float, optional
-        Height of wind measurement [m]. Default is 2.0 m.
-    
-    Returns
+        风速测量高度 [m]，默认2.0m / Height of wind measurement [m]. Default is 2.0 m.
+
+    返回 / Returns
     -------
     float or array_like
-        Penman potential evapotranspiration [W m⁻²]
-    
-    Notes
+        Penman潜在蒸散发 [W m⁻²] / Penman potential evapotranspiration [W m⁻²]
+
+    说明 / Notes
     -----
+    Penman方程结合了能量平衡法和空气动力学法：
     The Penman equation combines the energy balance and aerodynamic methods:
-    
+
     .. math::
         ET_P = \\frac{\\Delta (R_n - G) + \\rho_a c_p VPD / r_a}
                     {\\Delta + \\gamma}
-    
-    where:
-    - Δ is the slope of saturation vapor pressure curve
-    - γ is the psychrometric constant
-    - R_n is net radiation
-    - G is ground heat flux
-    - ρ_a is air density
-    - c_p is specific heat of air
-    - VPD is vapor pressure deficit
-    - r_a is aerodynamic resistance
-    
+
+    其中 / where:
+    - Δ 是饱和水汽压曲线斜率 / is the slope of saturation vapor pressure curve
+    - γ 是干湿表常数 / is the psychrometric constant
+    - R_n 是净辐射 / is net radiation
+    - G 是土壤热通量 / is ground heat flux
+    - ρ_a 是空气密度 / is air density
+    - c_p 是空气比热 / is specific heat of air
+    - VPD 是饱和水汽压差 / is vapor pressure deficit
+    - r_a 是空气动力学阻抗 / is aerodynamic resistance
+
+    空气动力学阻抗采用简化形式计算：
     The aerodynamic resistance is calculated using a simplified form:
-    
+
     .. math::
         r_a = \\frac{208}{u_z}
-    
-    where u_z is wind speed at height z (typically 2 m).
-    
-    References
+
+    其中u_z是高度z（通常2米）处的风速 / where u_z is wind speed at height z (typically 2 m).
+
+    参考文献 / References
     ----------
-    .. [1] Penman, H.L. (1948). Natural evaporation from open water, bare soil 
-           and grass. Proceedings of the Royal Society of London. Series A, 
+    .. [1] Penman, H.L. (1948). Natural evaporation from open water, bare soil
+           and grass. Proceedings of the Royal Society of London. Series A,
            193(1032), 120-145.
     .. [2] Allen et al. (1998) FAO-56
-    
-    Examples
+
+    示例 / Examples
     --------
     >>> penman_potential_et(500.0, 50.0, 20.0, 50.0, 2.0, 101325.0)
     334.78...
     """
-    # Physical constants
-    specific_heat = 1013.0  # J kg⁻¹ K⁻¹
-    air_density = 1.225  # kg m⁻³ (at sea level, 15°C)
-    
-    # Calculate required variables
-    delta = calculate_slope_svp(temperature)
-    gamma = calculate_psychrometric_constant(pressure)
-    vpd = vapor_pressure_deficit(temperature, relative_humidity)
-    
-    # Calculate aerodynamic resistance (simplified form)
-    # ra = 208 / u for reference grass at 2m height
+    # 物理常数 / Physical constants
+    specific_heat = 1013.0  # 空气比热 / Specific heat of air [J kg⁻¹ K⁻¹]
+    air_density = 1.225  # 空气密度 / Air density [kg m⁻³] (at sea level, 15°C)
+
+    # 计算所需变量 / Calculate required variables
+    delta = calculate_slope_svp(temperature)  # 饱和水汽压曲线斜率 / Slope of SVP curve
+    gamma = calculate_psychrometric_constant(pressure)  # 干湿表常数 / Psychrometric constant
+    vpd = vapor_pressure_deficit(temperature, relative_humidity)  # 饱和水汽压差 / VPD
+
+    # 计算空气动力学阻抗（简化形式）/ Calculate aerodynamic resistance (simplified form)
+    # ra = 208 / u 适用于2米高度的参考草地 / for reference grass at 2m height
     aerodynamic_resistance = 208.0 / wind_speed
-    
-    # Available energy
+
+    # 可用能量 / Available energy
     available_energy = net_radiation - ground_heat_flux
-    
-    # Penman equation
+
+    # Penman方程 / Penman equation
+    # 辐射项 / Radiation term
     radiation_term = delta * available_energy
+    # 空气动力学项 / Aerodynamic term
     aerodynamic_term = (air_density * specific_heat * vpd) / aerodynamic_resistance
-    
+
+    # 组合计算 / Combined calculation
     et_penman = (radiation_term + aerodynamic_term) / (delta + gamma)
-    
+
     return et_penman

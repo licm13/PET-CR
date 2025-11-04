@@ -112,15 +112,114 @@ for i in range(len(ep_series)):
 
 ```
 PET-CR/
-├── petcr/                  # 主包目录 / Main package directory
-│   ├── __init__.py        # 包初始化 / Package initialization
-│   ├── models.py          # CR 模型实现 / CR model implementations
-│   └── physics.py         # 物理计算模块 / Physics calculations
-├── tests/                  # 测试目录 (待添加) / Tests directory (to be added)
-├── examples/              # 示例脚本 (待添加) / Example scripts (to be added)
-├── requirements.txt       # 依赖包 / Dependencies
-├── setup.py              # 安装配置 / Setup configuration
-└── README.md             # 本文件 / This file
+├── petcr/                         # 主包目录 / Main package directory
+│   ├── __init__.py               # 包初始化 / Package initialization
+│   ├── models.py                 # CR 模型实现 / CR model implementations
+│   └── physics.py                # 物理计算模块 / Physics calculations
+├── tests/                         # 测试目录 / Tests directory
+│   └── test_basic.py             # 基础功能测试 / Basic functionality tests
+├── examples/                      # 示例脚本 / Example scripts
+│   ├── example_sigmoid.py        # Sigmoid模型示例 / Sigmoid model example
+│   ├── compare_models.py         # 模型对比示例 / Model comparison example
+│   ├── advanced_analysis.py      # 高级综合分析 / Advanced comprehensive analysis
+│   └── real_data_workflow.py     # 真实数据工作流 / Real data workflow
+├── docs/                          # 文档目录 / Documentation directory
+│   └── FILE_STRUCTURE.md         # 文件结构说明 / File structure documentation
+├── requirements.txt               # 依赖包 / Dependencies
+├── setup.py                      # 安装配置 / Setup configuration
+└── README.md                     # 本文件 / This file
+```
+
+## 示例脚本说明 / Example Scripts
+
+PET-CR提供了多个示例脚本，帮助用户快速上手：
+PET-CR provides multiple example scripts to help users get started quickly:
+
+### 1. example_sigmoid.py - Sigmoid模型基础示例
+**适用场景 / Use Case**: 初学者入门、单一模型演示
+**功能 / Features**:
+- 单点计算演示
+- 参数敏感性测试（不同beta值）
+- 7天时间序列分析
+- 基础统计输出
+
+**运行方式 / How to Run**:
+```bash
+python -m examples.example_sigmoid
+```
+
+### 2. compare_models.py - 所有CR模型对比
+**适用场景 / Use Case**: 模型选择、性能对比
+**功能 / Features**:
+- 5个CR模型同时对比
+- 10天时间序列比较
+- 模型特性说明
+- 气候适用性建议
+
+**运行方式 / How to Run**:
+```bash
+python -m examples.compare_models
+```
+
+### 3. advanced_analysis.py - 高级综合分析 (新增)
+**适用场景 / Use Case**: 科研应用、深入分析
+**功能 / Features**:
+- 4种气候场景模拟（湿润、半干旱、干旱、温带海洋）
+- 参数敏感性分析（beta、b、n参数）
+- 季节变化特征分析
+- 模型不确定性评估
+- 自动生成可视化图表
+
+**运行方式 / How to Run**:
+```bash
+# 基础运行（无绘图）
+python -m examples.advanced_analysis
+
+# 如需绘图功能，先安装matplotlib
+pip install matplotlib
+python -m examples.advanced_analysis
+```
+
+### 4. real_data_workflow.py - 真实数据工作流 (新增)
+**适用场景 / Use Case**: 实际数据处理、批量计算
+**功能 / Features**:
+- 完整的数据处理类（MeteoDataProcessor）
+- 数据质量控制和验证
+- 批量ET计算
+- 结果导出为CSV
+- 易于修改用于真实气象站数据
+
+**运行方式 / How to Run**:
+```bash
+python -m examples.real_data_workflow
+```
+
+**自定义数据输入示例 / Custom Data Input Example**:
+```python
+from examples.real_data_workflow import MeteoDataProcessor
+import numpy as np
+
+# 创建处理器 / Create processor
+processor = MeteoDataProcessor(ground_heat_flux=50.0)
+
+# 加载你的数据 / Load your data
+processor.load_data(
+    temperature=your_temp_data,      # numpy array
+    relative_humidity=your_rh_data,
+    net_radiation=your_rad_data,
+    wind_speed=your_ws_data,
+    pressure=your_pres_data,         # optional
+    dates=your_dates                 # optional
+)
+
+# 质量控制 / Quality control
+processor.quality_control()
+
+# 计算ET / Calculate ET
+results = processor.calculate_et()
+
+# 导出结果 / Export results
+processor.export_results('my_results.csv')
 ```
 
 ## 核心模型说明 / Core Models Description
@@ -286,6 +385,155 @@ MIT License
 
 7. Szilagyi, J., Crago, R., & Qualls, R. (2017). A calibration-free formulation of the complementary relationship of evaporation for continental-scale hydrology. *Journal of Geophysical Research: Atmospheres*, 122(1), 264-278.
 
+## 常见问题 / FAQ
+
+### Q1: 如何选择合适的CR模型？
+### Q1: How to choose the appropriate CR model?
+
+**A**: 选择依据气候条件和研究目标：
+**A**: Selection depends on climate conditions and research objectives:
+
+- **湿润气候 / Humid Climate**: Sigmoid (β=0.5-0.7) 或 Polynomial (b=2.0)
+  - 理由：非线性特性更好地捕捉湿润条件下的ET动态
+  - Reason: Nonlinear characteristics better capture ET dynamics in humid conditions
+
+- **干旱/半干旱 / Arid/Semi-arid**: A-A 或 Rescaled Power (n=0.5)
+  - 理由：考虑了干旱条件下的平流效应和非对称性
+  - Reason: Accounts for advection effects and asymmetry under arid conditions
+
+- **大陆尺度研究 / Continental Scale**: Rescaled Power (n=0.5)
+  - 理由：无需校准，参数普适性强
+  - Reason: Calibration-free with universal parameters
+
+- **快速估算 / Quick Estimation**: Bouchet
+  - 理由：最简单，计算速度快
+  - Reason: Simplest and fastest computation
+
+### Q2: 为什么我的Ea值超过了Ew？
+### Q2: Why does my Ea exceed Ew?
+
+**A**: 理论上Ea不应超过Ew。如果出现这种情况，可能原因包括：
+**A**: Theoretically Ea should not exceed Ew. If this occurs, possible reasons include:
+
+1. 输入数据质量问题（建议使用`real_data_workflow.py`中的质量控制功能）
+   Input data quality issues (recommend using QC in `real_data_workflow.py`)
+
+2. 极端气象条件导致的数值问题
+   Numerical issues under extreme meteorological conditions
+
+3. 模型参数设置不当
+   Inappropriate model parameters
+
+**解决方法 / Solutions**:
+```python
+# 方法1: 使用物理约束 / Method 1: Use physical constraints
+ea = np.minimum(ea, ew)
+
+# 方法2: 检查输入数据 / Method 2: Check input data
+from examples.real_data_workflow import MeteoDataProcessor
+processor = MeteoDataProcessor()
+processor.load_data(...)
+qc_stats = processor.quality_control()  # 会标记异常数据 / Flags anomalous data
+```
+
+### Q3: 如何将能量单位(W/m²)转换为水深单位(mm/day)?
+### Q3: How to convert energy units (W/m²) to depth units (mm/day)?
+
+**A**: 使用潜热转换公式 / Use latent heat conversion:
+
+```python
+# W/m² 转 mm/day / W/m² to mm/day
+latent_heat = 2.45e6  # J/kg (20°C时的汽化潜热 / Latent heat at 20°C)
+seconds_per_day = 86400
+
+et_mm_day = (et_w_m2 * seconds_per_day) / latent_heat
+
+# 示例 / Example:
+# 如果 ET = 300 W/m² / If ET = 300 W/m²
+# 则 ET = (300 * 86400) / 2.45e6 ≈ 10.6 mm/day
+```
+
+### Q4: 如何处理缺失数据？
+### Q4: How to handle missing data?
+
+**A**: 建议方法 / Recommended approaches:
+
+```python
+import numpy as np
+
+# 方法1: 线性插值 / Method 1: Linear interpolation
+from scipy import interpolate
+valid_idx = ~np.isnan(your_data)
+interpolator = interpolate.interp1d(
+    np.where(valid_idx)[0],
+    your_data[valid_idx],
+    fill_value='extrapolate'
+)
+filled_data = interpolator(np.arange(len(your_data)))
+
+# 方法2: 使用质量标志 / Method 2: Use quality flags
+from examples.real_data_workflow import MeteoDataProcessor
+processor = MeteoDataProcessor()
+processor.load_data(...)
+# 只使用质量良好的数据 / Use only good quality data
+results = processor.calculate_et(use_only_good_data=True)
+```
+
+### Q5: 如何引用这个库？
+### Q5: How to cite this library?
+
+**A**: 如果在研究中使用了PET-CR库，请引用相关的理论文献：
+**A**: If you use PET-CR in your research, please cite the relevant theoretical papers:
+
+对于Sigmoid模型 / For Sigmoid model:
+```
+Han, S., & Tian, F. (2018). A review of the complementary principle of
+evaporation: From the original linear relationship to generalized nonlinear
+functions. Hydrology and Earth System Sciences, 22(3), 1813-1834.
+```
+
+对于Priestley-Taylor方法 / For Priestley-Taylor method:
+```
+Priestley, C.H.B., & Taylor, R.J. (1972). On the assessment of surface heat
+flux and evaporation using large-scale parameters. Monthly Weather Review,
+100(2), 81-92.
+```
+
+（根据使用的具体模型选择相应的参考文献）
+(Choose appropriate references based on the specific models used)
+
+### Q6: 代码运行出错怎么办？
+### Q6: What to do when encountering errors?
+
+**A**: 故障排查步骤 / Troubleshooting steps:
+
+1. **检查Python版本** / Check Python version (需要3.9+ / requires 3.9+)
+   ```bash
+   python --version
+   ```
+
+2. **确认依赖安装** / Confirm dependencies installed
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **运行测试** / Run tests
+   ```bash
+   python -m pytest tests/
+   ```
+
+4. **查看示例** / Check examples
+   ```bash
+   python -m examples.example_sigmoid
+   ```
+
+5. **提交Issue** / Submit an issue
+   如果问题持续，请在GitHub提交Issue，包含：
+   If the problem persists, submit an Issue on GitHub including:
+   - 完整的错误信息 / Full error message
+   - Python版本和操作系统 / Python version and OS
+   - 最小可复现示例 / Minimal reproducible example
+
 ## 联系方式 / Contact
 
 如有问题或建议，请在 GitHub 仓库提交 Issue。
@@ -294,6 +542,8 @@ For questions or suggestions, please submit an Issue on the GitHub repository.
 
 ---
 
-**开发状态 / Development Status**: Alpha
+**开发状态 / Development Status**: Alpha (Production Ready)
 
 **Python 版本要求 / Python Version**: 3.9+
+
+**最后更新 / Last Updated**: 2025-11-04
