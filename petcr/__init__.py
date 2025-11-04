@@ -167,6 +167,7 @@ from .utils import (
     generate_timeseries_data,
     load_fluxnet_data,
     load_cmip6_data,
+    setup_chinese_font,
 )
 
 # ============================================================================
@@ -214,4 +215,5 @@ __all__ = [
     'generate_timeseries_data',
     'load_fluxnet_data',
     'load_cmip6_data',
+    'setup_chinese_font',
 ]

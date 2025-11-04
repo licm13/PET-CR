@@ -34,6 +34,64 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Union, Optional, Tuple
 import warnings
+from pathlib import Path
+
+# 尝试延迟导入 matplotlib（仅当需要绘图时）/ Lazy import matplotlib only when needed
+def setup_chinese_font(preferred: Optional[list] = None) -> Optional[str]:
+    """
+    配置 Matplotlib 以正确显示中文，并修复负号显示问题。
+    Configure Matplotlib for proper Chinese rendering and fix minus sign display.
+
+    Parameters
+    ----------
+    preferred : list, optional
+        优先候选字体名称列表；若未提供将使用常见中文字体候选。
+
+    Returns
+    -------
+    str or None
+        实际使用的字体名称；如果 Matplotlib 未安装则返回 None（静默跳过）。
+
+    Notes
+    -----
+    - 在 Windows 上通常可用: 'SimHei', 'Microsoft YaHei'
+    - 在 macOS 上: 'PingFang SC'
+    - 跨平台开源: 'Noto Sans CJK SC', 'Source Han Sans SC'
+    """
+    try:
+        import matplotlib.pyplot as plt  # noqa: F401
+        from matplotlib import font_manager
+    except Exception:
+        # Matplotlib 不可用，直接跳过 / Matplotlib unavailable, skip silently
+        return None
+
+    candidates = preferred or [
+        'SimHei',
+        'Microsoft YaHei',
+        'PingFang SC',
+        'Noto Sans CJK SC',
+        'Source Han Sans SC',
+        'WenQuanYi Zen Hei',
+        'Arial Unicode MS',
+    ]
+
+    available = {f.name for f in font_manager.fontManager.ttflist}
+    chosen = None
+    for name in candidates:
+        if name in available:
+            chosen = name
+            break
+
+    # 设置字体与负号 / Set font and minus sign rendering
+    import matplotlib as mpl
+    if chosen:
+        mpl.rcParams['font.sans-serif'] = [chosen]
+    else:
+        # 仍然设置一个候选列表，部分环境可解析 / set a candidate list anyway
+        mpl.rcParams['font.sans-serif'] = candidates
+    mpl.rcParams['axes.unicode_minus'] = False
+
+    return chosen
 
 # 类型别名 / Type alias
 ArrayDict = Dict[str, np.ndarray]

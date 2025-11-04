@@ -42,58 +42,13 @@ except ImportError:
 # 尝试导入matplotlib用于可视化 / Try to import matplotlib for visualization
 try:
     import matplotlib.pyplot as plt
-    from matplotlib import font_manager
-    import os
-    from pathlib import Path
+    from petcr import setup_chinese_font
+    # 设置中文字体和负号显示 / Set Chinese font and minus sign
+    setup_chinese_font()
     PLOTTING_AVAILABLE = True
-
-    def _setup_chinese_font():
-        """配置 Matplotlib 以支持中文显示并避免负号显示为方块。
-        Configure Matplotlib to support Chinese rendering and proper minus signs.
-        """
-        try:
-            available_fonts = {f.name for f in font_manager.fontManager.ttflist}
-            # 常见中文字体优先级 / Common Chinese fonts priority list
-            candidates = [
-                'SimHei',               # 黑体 (Windows 常见)
-                'Microsoft YaHei',      # 微软雅黑 (Windows)
-                'Noto Sans CJK SC',     # Noto 思源黑体
-                'Source Han Sans SC',   # 思源黑体 SC
-                'PingFang SC',          # macOS
-                'WenQuanYi Zen Hei',    # Linux
-            ]
-
-            chosen = None
-            for name in candidates:
-                if name in available_fonts:
-                    chosen = name
-                    break
-
-            if chosen is not None:
-                plt.rcParams['font.sans-serif'] = [chosen]
-            else:
-                # 回退到兼容列表，尽量保证显示 / Fallback list
-                plt.rcParams['font.sans-serif'] = candidates + ['Arial Unicode MS']
-
-            # 确保负号正常显示 / Ensure minus sign displays correctly
-            plt.rcParams['axes.unicode_minus'] = False
-        except Exception:
-            # 静默失败，保持默认设置 / Silent fail, keep defaults
-            plt.rcParams['axes.unicode_minus'] = False
-
-    # 初始化字体设置 / Initialize font settings once
-    _setup_chinese_font()
-
 except ImportError:
     PLOTTING_AVAILABLE = False
-    # 为类型检查提供一个空实现，运行时不会被调用
-    class _DummyPLT:
-        rcParams: dict = {}
-        def __getattr__(self, _name: str):
-            def _noop(*args: Any, **kwargs: Any):
-                return None
-            return _noop
-    plt = _DummyPLT()  # type: ignore[assignment]
+    plt = None  # type: ignore
     print("警告: matplotlib未安装，将跳过绘图功能")
     print("Warning: matplotlib not installed, plotting will be skipped")
     print("安装命令 / Install with: pip install matplotlib\n")
@@ -522,19 +477,13 @@ def plot_results(scenarios: Dict, all_results: Dict, sensitivity_results: Dict):
     plt.tight_layout()
 
     # 保存图片到 examples/figures 目录 / Save figure to examples/figures
-    try:
-        figures_dir = Path(__file__).parent / 'figures'
-        figures_dir.mkdir(parents=True, exist_ok=True)
-        output_file = figures_dir / 'petcr_advanced_analysis.png'
-        plt.savefig(str(output_file), dpi=300, bbox_inches='tight')
-        print(f"图表已保存到: {output_file}")
-        print(f"Figure saved to: {output_file}")
-    except Exception as e:
-        # 回退到当前工作目录 / Fallback to CWD if path fails
-        output_file = 'petcr_advanced_analysis.png'
-        plt.savefig(output_file, dpi=300, bbox_inches='tight')
-        print(f"(回退) 图表已保存到当前目录: {output_file}")
-        print(f"(Fallback) Figure saved to current directory: {output_file}")
+    from pathlib import Path
+    figures_dir = Path(__file__).parent / 'figures'
+    figures_dir.mkdir(parents=True, exist_ok=True)
+    output_file = figures_dir / 'petcr_advanced_analysis.png'
+    plt.savefig(str(output_file), dpi=300, bbox_inches='tight')
+    print(f"图表已保存到: {output_file}")
+    print(f"Figure saved to: {output_file}")
     print()
 
     # 显示图表 / Show plot

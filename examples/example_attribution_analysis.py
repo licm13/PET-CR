@@ -41,7 +41,8 @@ try:
     from petcr import (
         generate_timeseries_data,
         attribution_analysis,
-        projection_1pctCO2
+        projection_1pctCO2,
+        setup_chinese_font,
     )
 except ImportError:
     # 如果未安装，添加路径 / If not installed, add path
@@ -51,7 +52,8 @@ except ImportError:
     from petcr import (
         generate_timeseries_data,
         attribution_analysis,
-        projection_1pctCO2
+        projection_1pctCO2,
+        setup_chinese_font,
     )
 
 
@@ -211,8 +213,14 @@ def create_visualization(data, results, output_path='examples/figures'):
     print("步骤 3: 创建可视化图表 / Step 3: Create Visualization")
     print("=" * 70)
 
+    # 优先设置中文字体 / Prefer Chinese-capable font
+    chosen_font = setup_chinese_font()
+
     # 设置matplotlib样式 / Set matplotlib style
     mpl.rcParams['font.family'] = 'sans-serif'
+    if chosen_font:
+        mpl.rcParams['font.sans-serif'] = [chosen_font]
+    mpl.rcParams['axes.unicode_minus'] = False
     mpl.rcParams['font.size'] = 10
     mpl.rcParams['axes.linewidth'] = 1.0
     mpl.rcParams['axes.labelsize'] = 11
