@@ -86,7 +86,14 @@ try:
 
 except ImportError:
     PLOTTING_AVAILABLE = False
-    plt = None  # type: ignore[assignment]
+    # 为类型检查提供一个空实现，运行时不会被调用
+    class _DummyPLT:
+        rcParams: dict = {}
+        def __getattr__(self, _name: str):
+            def _noop(*args: Any, **kwargs: Any):
+                return None
+            return _noop
+    plt = _DummyPLT()  # type: ignore[assignment]
     print("警告: matplotlib未安装，将跳过绘图功能")
     print("Warning: matplotlib not installed, plotting will be skipped")
     print("安装命令 / Install with: pip install matplotlib\n")
