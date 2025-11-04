@@ -4,21 +4,37 @@ Example: Comparing all CR models
 
 这个示例比较了 PET-CR 库中所有的互补关系模型。
 This example compares all Complementary Relationship models in the PET-CR library.
+
+Note: Install the package first with: pip install -e . (from project root)
+Or run from project root: python -m examples.compare_models
 """
 
 import numpy as np
-import sys
-sys.path.insert(0, '..')
 
-from petcr import (
-    sigmoid_cr, 
-    polynomial_cr, 
-    rescaled_power_cr,
-    bouchet_cr,
-    aa_cr,
-    penman_potential_et,
-    priestley_taylor_et
-)
+try:
+    from petcr import (
+        sigmoid_cr, 
+        polynomial_cr, 
+        rescaled_power_cr,
+        bouchet_cr,
+        aa_cr,
+        penman_potential_et,
+        priestley_taylor_et
+    )
+except ImportError:
+    # Fallback for running directly without installation
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from petcr import (
+        sigmoid_cr, 
+        polynomial_cr, 
+        rescaled_power_cr,
+        bouchet_cr,
+        aa_cr,
+        penman_potential_et,
+        priestley_taylor_et
+    )
 
 def main():
     print("=" * 80)

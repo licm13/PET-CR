@@ -7,13 +7,21 @@ Example: Estimating actual evapotranspiration using Sigmoid CR model
 
 This example demonstrates how to use the Sigmoid model (Han & Tian, 2018) 
 from the PET-CR library to estimate actual evapotranspiration.
+
+Note: Install the package first with: pip install -e . (from project root)
+Or run from project root: python -m examples.example_sigmoid
 """
 
 import numpy as np
-import sys
-sys.path.insert(0, '..')
 
-from petcr import sigmoid_cr, penman_potential_et, priestley_taylor_et
+try:
+    from petcr import sigmoid_cr, penman_potential_et, priestley_taylor_et
+except ImportError:
+    # Fallback for running directly without installation
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from petcr import sigmoid_cr, penman_potential_et, priestley_taylor_et
 
 def main():
     print("=" * 70)

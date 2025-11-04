@@ -3,25 +3,45 @@ Basic tests for PET-CR library
 
 These tests verify that the core functions run without errors and produce
 reasonable results.
+
+Note: Install the package first with: pip install -e . (from project root)
+Or run from project root: python -m tests.test_basic
 """
 
 import numpy as np
 import sys
-sys.path.insert(0, '..')
 
-from petcr import (
-    sigmoid_cr,
-    polynomial_cr,
-    rescaled_power_cr,
-    bouchet_cr,
-    aa_cr,
-    penman_potential_et,
-    priestley_taylor_et,
-    vapor_pressure_deficit,
-    calculate_psychrometric_constant,
-    calculate_saturation_vapor_pressure,
-    calculate_slope_svp
-)
+try:
+    from petcr import (
+        sigmoid_cr,
+        polynomial_cr,
+        rescaled_power_cr,
+        bouchet_cr,
+        aa_cr,
+        penman_potential_et,
+        priestley_taylor_et,
+        vapor_pressure_deficit,
+        calculate_psychrometric_constant,
+        calculate_saturation_vapor_pressure,
+        calculate_slope_svp
+    )
+except ImportError:
+    # Fallback for running directly without installation
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from petcr import (
+        sigmoid_cr,
+        polynomial_cr,
+        rescaled_power_cr,
+        bouchet_cr,
+        aa_cr,
+        penman_potential_et,
+        priestley_taylor_et,
+        vapor_pressure_deficit,
+        calculate_psychrometric_constant,
+        calculate_saturation_vapor_pressure,
+        calculate_slope_svp
+    )
 
 
 def test_physics_functions():
