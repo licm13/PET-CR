@@ -480,7 +480,7 @@ DAYS_PER_MONTH_AVG = 30.4375  # days (365.25 / 12)
 # ============================================================================
 # Specific heat of air at constant pressure / 空气定压比热
 CP_AIR_J = 1013.0  # J/(kg·K)
-CP_AIR_MJ = 1.005e-3  # MJ/(kg·K)
+CP_AIR_MJ = 1.013e-3  # MJ/(kg·K)
 
 # Latent heat of vaporization (at 20°C) / 汽化潜热（20°C）
 LV_WATER_J = 2.45e6  # J/kg
