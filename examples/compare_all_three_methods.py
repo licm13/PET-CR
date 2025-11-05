@@ -279,9 +279,12 @@ def main():
                 ha='center', va='bottom', fontweight='bold', fontsize=10)
 
     plt.tight_layout()
-    plt.savefig('/home/user/PET-CR/examples/figures/compare_all_three_methods.png',
-                dpi=300, bbox_inches='tight')
-    print("保存图片 / Figure saved: examples/figures/compare_all_three_methods.png")
+    from pathlib import Path
+    figures_dir = Path(__file__).parent / 'figures'
+    figures_dir.mkdir(parents=True, exist_ok=True)
+    output_file = figures_dir / 'compare_all_three_methods.png'
+    plt.savefig(str(output_file), dpi=300, bbox_inches='tight')
+    print(f"保存图片 / Figure saved: {output_file}")
     print()
 
     # ========================================================================

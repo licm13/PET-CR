@@ -10,6 +10,16 @@ Or run from project root: python -m examples.compare_models
 """
 
 import numpy as np
+from pathlib import Path
+from typing import Any
+
+# 尝试导入 matplotlib 用于出图 / Try to import matplotlib for plotting
+plt: Any = None
+try:
+    import matplotlib.pyplot as plt  # type: ignore
+    PLOTTING_AVAILABLE = True
+except ImportError:
+    PLOTTING_AVAILABLE = False
 
 try:
     from petcr import (
@@ -101,11 +111,11 @@ def main():
     ew_series = np.full(days, 350.0)
     
     # 使用各个模型计算 / Calculate using each model
-    ea_sigmoid = sigmoid_cr(ep_series, ew_series, beta=0.5)
-    ea_polynomial = polynomial_cr(ep_series, ew_series, b=2.0)
-    ea_rescaled = rescaled_power_cr(ep_series, ew_series, n=0.5)
-    ea_bouchet = bouchet_cr(ep_series, ew_series)
-    ea_aa = aa_cr(ep_series, ew_series)
+    ea_sigmoid = np.asarray(sigmoid_cr(ep_series, ew_series, beta=0.5))
+    ea_polynomial = np.asarray(polynomial_cr(ep_series, ew_series, b=2.0))
+    ea_rescaled = np.asarray(rescaled_power_cr(ep_series, ew_series, n=0.5))
+    ea_bouchet = np.asarray(bouchet_cr(ep_series, ew_series))
+    ea_aa = np.asarray(aa_cr(ep_series, ew_series))
     
     print(f"{'Day':<5} {'Ep':<8} {'Ew':<8} {'Sigmoid':<10} {'Polynomial':<12} "
           f"{'Rescaled':<10} {'Bouchet':<10} {'A-A':<10}")
@@ -146,6 +156,64 @@ def main():
               f"{min_ea:.2f} - {max_ea:.2f}")
     
     print()
+
+    # ==============================
+    # 出图并保存到 examples/figures
+    # Plot and save to examples/figures
+    # ==============================
+    if PLOTTING_AVAILABLE:
+        # 配置中文字体 / Configure Chinese font
+        try:
+            import petcr
+            petcr.setup_chinese_font()
+        except Exception:
+            pass
+
+        # 组合图：左边单点柱状图，右边时间序列折线图
+        fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+        # 左: 单点比较 / Left: single-point comparison
+        ax1 = axes[0]
+        single_names = list(models.keys())
+        single_values = [float(models[k]) for k in single_names]
+        bars = ax1.bar(range(len(single_names)), single_values, color="#1f77b4", alpha=0.8)
+        ax1.axhline(y=ew, color='red', linestyle='--', linewidth=1.5, label='Ew')
+        ax1.set_xticks(range(len(single_names)))
+        ax1.set_xticklabels(single_names, rotation=20)
+        ax1.set_ylabel('Ea (W/m²)')
+        ax1.set_title('单点比较 / Single Point Comparison')
+        ax1.legend()
+        ax1.grid(True, alpha=0.3, axis='y')
+
+        # 为柱加数值标签 / add value labels
+        for bar in bars:
+            h = bar.get_height()
+            ax1.text(bar.get_x() + bar.get_width()/2, h, f"{h:.1f}",
+                     ha='center', va='bottom', fontsize=9)
+
+        # 右: 时间序列 / Right: time series
+        ax2 = axes[1]
+        ax2.plot(range(1, days+1), ea_sigmoid, 'o-', label='Sigmoid', linewidth=2)
+        ax2.plot(range(1, days+1), ea_polynomial, 's-', label='Polynomial', linewidth=2)
+        ax2.plot(range(1, days+1), ea_rescaled, '^-', label='Rescaled Power', linewidth=2)
+        ax2.plot(range(1, days+1), ea_bouchet, 'd-', label='Bouchet', linewidth=2)
+        ax2.plot(range(1, days+1), ea_aa, 'x-', label='A-A', linewidth=2)
+        ax2.plot(range(1, days+1), ew_series, '--', color='k', alpha=0.6, label='Ew')
+        ax2.set_xlabel('天数 / Day')
+        ax2.set_ylabel('Ea (W/m²)')
+        ax2.set_title('时间序列比较 / Time Series Comparison')
+        ax2.legend(fontsize=9)
+        ax2.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+
+        # 保存图片到 examples/figures / Save to examples/figures
+        figures_dir = Path(__file__).parent / 'figures'
+        figures_dir.mkdir(parents=True, exist_ok=True)
+        out_path = figures_dir / 'compare_models.png'
+        plt.savefig(str(out_path), dpi=300, bbox_inches='tight')
+        print(f"图已保存 / Figure saved: {out_path}")
+        print()
     
     # 模型特性说明 / Model characteristics
     print("=" * 80)
