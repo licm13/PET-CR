@@ -9,7 +9,7 @@
 
 ### Overview
 
-**PET-CR** is a comprehensive Python library for estimating actual evapotranspiration (ET) using Complementary Relationship (CR) theory. The library integrates two distinct but complementary approaches:
+**PET-CR** is a comprehensive Python library for estimating actual evapotranspiration (ET) using Complementary Relationship (CR) theory. The library integrates **three distinct but complementary approaches**:
 
 #### **Method 1: Traditional CR Models**
 For users with pre-calculated potential evapotranspiration components:
@@ -27,17 +27,28 @@ For users with energy flux data who want advanced PET estimation and attribution
   - Separation of climate change and land surface effects
   - 1pctCO2 experiment analysis
 
-This unified framework makes PET-CR suitable for both operational ET estimation and advanced research in land-atmosphere interactions and climate change attribution.
+#### **Method 3: BGCR-Budyko Model (NEW in v0.3.0)**
+For users with meteorological data, precipitation, and catchment characteristics:
+- **Input**: Net radiation, temperature, wind speed, vapor pressure, precipitation, seasonality index, albedo
+- **Output**: Monthly actual ET with distributed Budyko parameter
+- **Features**:
+  - Combines long-term Budyko framework with short-term GCR
+  - Handles spatial heterogeneity through regionalized w parameter
+  - Incorporates precipitation seasonality effects
+  - Two parameterization schemes: SI-only (BGCR-1) and SI+albedo (BGCR-2)
+
+This unified framework makes PET-CR suitable for operational ET estimation, research in land-atmosphere interactions, climate change attribution, and heterogeneous catchment analysis.
 
 ### Key Features
 
 - ✅ **Bilingual Documentation** (English/Chinese)
-- ✅ **Two Complementary Approaches** (Traditional CR + Land-Atmosphere Framework)
+- ✅ **Three Complementary Approaches** (Traditional CR + Land-Atmosphere + BGCR-Budyko)
 - ✅ **SI Units** throughout
 - ✅ **Literature-Referenced** implementations
 - ✅ **Comprehensive Examples** with visualization
 - ✅ **Data Utilities** for sample generation and CMIP6/Fluxnet loading
 - ✅ **Attribution Analysis** for climate change studies
+- ✅ **Spatial Heterogeneity** handling via distributed parameters
 
 ### Installation
 
@@ -100,6 +111,37 @@ print(f"Actual ET: {results['et']:.2f} mm/day")
 # Actual ET: 4.35 mm/day
 ```
 
+#### Method 3: BGCR-Budyko Model
+
+Use the BGCR-Budyko model for monthly ET estimation with catchment characteristics:
+
+```python
+import petcr
+
+# Calculate monthly ET using BGCR-Budyko model
+results = petcr.calculate_bgcr_et(
+    net_radiation=150.0,              # Net radiation [W/m²]
+    temperature=20.0,                 # Air temperature [°C]
+    wind_speed=2.0,                   # Wind speed [m/s]
+    actual_vapor_pressure=1.5,        # Actual vapor pressure [kPa]
+    saturation_vapor_pressure=2.3,    # Saturation vapor pressure [kPa]
+    precipitation=80.0,               # Monthly precipitation [mm]
+    seasonality_index=0.5,            # Precipitation seasonality index
+    albedo=0.2                        # Surface albedo [0-1]
+)
+
+print(f"Monthly ET: {results['et']:.2f} mm")
+print(f"Apparent potential evaporation: {results['epa']:.2f} mm")
+print(f"Budyko parameter w: {results['w']:.3f}")
+print(f"Complementary coefficient: {results['beta_c']:.3f}")
+
+# Output:
+# Monthly ET: 72.45 mm
+# Apparent potential evaporation: 85.30 mm
+# Budyko parameter w: 2.135
+# Complementary coefficient: 0.892
+```
+
 #### Attribution Analysis
 
 Separate ET changes into climate and land surface contributions:
@@ -156,6 +198,17 @@ print(f"Land surface contribution: {results['et_landsurf'][-1]:.3f} mm/day")
 | `calculate_wet_bowen_ratio()` | Calculate wet Bowen ratio with constraints |
 | `batch_calculate_pet()` | Batch calculation for multiple time steps |
 
+#### BGCR-Budyko Model (`petcr.bgcr_model`)
+
+| Function | Purpose |
+|----------|---------|
+| `calculate_bgcr_et()` | High-level BGCR-Budyko ET calculation |
+| `bgcr_monthly()` | Core BGCR monthly model |
+| `calculate_penman_components()` | Calculate Erad and Eaero from Penman equation |
+| `calculate_seasonality_index()` | Compute precipitation seasonality index |
+| `calculate_budyko_w_from_SI()` | Single-variable w parameterization (BGCR-1) |
+| `calculate_budyko_w_from_SI_albedo()` | Dual-variable w parameterization (BGCR-2) |
+
 #### Attribution Analysis (`petcr.attribution`)
 
 | Function | Purpose |
@@ -178,6 +231,9 @@ python examples/compare_models.py
 # Land-atmosphere framework
 python examples/example_land_atmosphere.py
 
+# BGCR-Budyko model
+python examples/compare_all_three_methods.py
+
 # Attribution analysis with visualization
 python examples/example_attribution_analysis.py
 
@@ -195,6 +251,7 @@ PET-CR/
 │   ├── models.py              # Traditional CR models
 │   ├── physics.py             # Physical calculations (Penman, PT)
 │   ├── land_atmosphere.py     # Land-atmosphere PET estimation
+│   ├── bgcr_model.py          # BGCR-Budyko model (NEW)
 │   ├── attribution.py         # Attribution analysis (Budyko)
 │   └── utils.py               # Data generation and loading
 ├── examples/                   # Example scripts
@@ -202,8 +259,10 @@ PET-CR/
 │   ├── example_land_atmosphere.py
 │   ├── example_attribution_analysis.py
 │   ├── compare_models.py
+│   ├── compare_all_three_methods.py  # NEW
 │   ├── real_data_workflow.py
 │   └── advanced_analysis.py
+├── bgcr-budyko/               # Original BGCR-Budyko implementation
 ├── tests/                      # Unit tests
 ├── docs/                       # Documentation
 ├── README.md                   # This file
@@ -222,6 +281,18 @@ If you use this library in your research, please cite:
   journal={Nature Climate Change},
   year={2025},
   note={accepted}
+}
+```
+
+For BGCR-Budyko model:
+```bibtex
+@article{yang2006bgcr,
+  title={Interpreting the complementary relationship in non-humid environments based on the Budyko and Penman hypotheses},
+  author={Yang, Dawen and Sun, Fuqiang and Liu, Zhiyong and Cong, Zhentao and Lei, Zhidong},
+  journal={Geophysical Research Letters},
+  volume={33},
+  number={18},
+  year={2006}
 }
 ```
 
@@ -279,7 +350,7 @@ MIT License - see LICENSE file for details.
 
 ### 概述
 
-**PET-CR** 是一个使用互补关系（CR）理论估算实际蒸散发（ET）的综合Python库。该库集成了两种不同但互补的方法：
+**PET-CR** 是一个使用互补关系（CR）理论估算实际蒸散发（ET）的综合Python库。该库集成了**三种不同但互补的方法**：
 
 #### **方法1：传统CR模型**
 适用于拥有预计算潜在蒸散发分量的用户：
@@ -297,17 +368,28 @@ MIT License - see LICENSE file for details.
   - 分离气候变化和陆地表面效应
   - 1pctCO2实验分析
 
-这个统一框架使PET-CR既适用于业务性ET估算，也适用于陆地-大气相互作用和气候变化归因的高级研究。
+#### **方法3：BGCR-Budyko模型（v0.3.0新增）**
+适用于拥有气象数据、降水和流域特征的用户：
+- **输入**: 净辐射、温度、风速、水汽压、降水、季节性指数、反照率
+- **输出**: 带有分布式Budyko参数的月尺度实际ET
+- **特性**:
+  - 结合长期Budyko框架与短期GCR
+  - 通过区域化w参数处理空间异质性
+  - 考虑降水季节性影响
+  - 两种参数化方案：仅SI（BGCR-1）和SI+反照率（BGCR-2）
+
+这个统一框架使PET-CR既适用于业务性ET估算、陆地-大气相互作用研究、气候变化归因，也适用于异质流域分析。
 
 ### 主要特性
 
 - ✅ **双语文档**（英文/中文）
-- ✅ **两种互补方法**（传统CR + 陆地-大气框架）
+- ✅ **三种互补方法**（传统CR + 陆地-大气 + BGCR-Budyko）
 - ✅ **SI单位**贯穿始终
 - ✅ **文献参考**实现
 - ✅ **综合示例**含可视化
 - ✅ **数据工具**用于样本生成和CMIP6/Fluxnet加载
 - ✅ **归因分析**用于气候变化研究
+- ✅ **空间异质性**通过分布式参数处理
 
 ### 安装
 
@@ -520,6 +602,15 @@ MIT许可证 - 详见LICENSE文件。
 ---
 
 ## 版本历史 / Version History
+
+### v0.3.0 (2025-01-XX) - **CURRENT**
+- ✨ **NEW**: Integrated BGCR-Budyko model as Method 3
+- ✨ **NEW**: Added distributed Budyko parameter schemes (BGCR-1, BGCR-2)
+- ✨ **NEW**: Monthly ET estimation with spatial heterogeneity
+- ✨ **NEW**: Precipitation seasonality index calculation
+- ✨ **NEW**: Comprehensive three-method comparison example
+- 📚 Updated documentation with Method 3
+- 📚 Created teaching presentation (PPT)
 
 ### v0.2.0 (2025-01-XX)
 - ✨ Merged Zhou_NCC_Code (land-atmosphere framework)

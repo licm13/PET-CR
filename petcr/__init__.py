@@ -6,7 +6,7 @@ PET-CR: 互补关系蒸散发库 / Complementary Relationship Evapotranspiration
 A Python library for estimating actual evapotranspiration (Ea) using
 Complementary Relationship (CR) theory.
 
-本包提供两种主要方法 / This package provides two main approaches
+本包提供三种主要方法 / This package provides three main approaches
 -----------------------------------------------------------
 
 **方法1: 传统CR模型 / Method 1: Traditional CR Models**
@@ -32,6 +32,18 @@ Complementary Relationship (CR) theory.
     - Budyko框架归因 / Budyko framework attribution
     - 气候变化影响分离 / Climate change impact separation
 
+**方法3: BGCR-Budyko模型 / Method 3: BGCR-Budyko Model**
+    结合Budyko框架与广义互补关系的月尺度ET估算
+    Monthly ET estimation combining Budyko framework and generalized CR
+
+    适用于拥有气象数据、降水和流域特征的用户
+    For users who have meteorological data, precipitation, and catchment characteristics
+
+    - 月尺度ET估算 / Monthly ET estimation
+    - 分布式Budyko参数 / Distributed Budyko parameter
+    - 空间异质性处理 / Spatial heterogeneity handling
+    - 降水季节性影响 / Precipitation seasonality effects
+
 主要特性 / Key Features
 ------------------------
 - 标准化的SI单位输入 / Standardized SI unit inputs
@@ -46,6 +58,7 @@ Complementary Relationship (CR) theory.
 - **models**: 传统CR模型 / Traditional CR models
 - **physics**: 物理计算 / Physical calculations
 - **land_atmosphere**: 陆地-大气PET估算 / Land-atmosphere PET estimation
+- **bgcr_model**: BGCR-Budyko模型 / BGCR-Budyko model
 - **attribution**: ET归因分析 / ET attribution analysis
 - **utils**: 工具函数 / Utility functions
 
@@ -76,7 +89,25 @@ Complementary Relationship (CR) theory.
     print(f"PETe: {results['pete']:.2f} mm/day")
     print(f"PETa: {results['peta']:.2f} mm/day")
 
-**示例3: 归因分析 / Example 3: Attribution Analysis**::
+**示例3: BGCR-Budyko模型 / Example 3: BGCR-Budyko Model**::
+
+    import petcr
+
+    # 计算月尺度ET / Calculate monthly ET
+    results = petcr.calculate_bgcr_et(
+        net_radiation=150.0,
+        temperature=20.0,
+        wind_speed=2.0,
+        actual_vapor_pressure=1.5,
+        saturation_vapor_pressure=2.3,
+        precipitation=80.0,
+        seasonality_index=0.5,
+        albedo=0.2
+    )
+    print(f"Monthly ET: {results['et']:.2f} mm")
+    print(f"Budyko w: {results['w']:.3f}")
+
+**示例4: 归因分析 / Example 4: Attribution Analysis**::
 
     import petcr
     import numpy as np
@@ -105,10 +136,10 @@ Nature Climate Change (accepted).
 
 作者 / Authors: PET-CR Contributors
 许可证 / License: MIT
-版本 / Version: 0.2.0
+版本 / Version: 0.3.0
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 # ============================================================================
 # 传统CR模型 / Traditional CR Models
@@ -146,6 +177,18 @@ from .land_atmosphere import (
     calculate_actual_vapor_pressure,
     calculate_psychrometric_constant_land,
     calculate_slope_saturation_curve,
+)
+
+# ============================================================================
+# BGCR-Budyko模型 / BGCR-Budyko Model
+# ============================================================================
+from .bgcr_model import (
+    bgcr_monthly,
+    calculate_bgcr_et,
+    calculate_penman_components,
+    calculate_seasonality_index,
+    calculate_budyko_w_from_SI,
+    calculate_budyko_w_from_SI_albedo,
 )
 
 # ============================================================================
@@ -202,6 +245,14 @@ __all__ = [
     'calculate_actual_vapor_pressure',
     'calculate_psychrometric_constant_land',
     'calculate_slope_saturation_curve',
+
+    # BGCR-Budyko模型 / BGCR-Budyko Model
+    'bgcr_monthly',
+    'calculate_bgcr_et',
+    'calculate_penman_components',
+    'calculate_seasonality_index',
+    'calculate_budyko_w_from_SI',
+    'calculate_budyko_w_from_SI_albedo',
 
     # 归因分析 / Attribution Analysis
     'budyko_et_ratio',
