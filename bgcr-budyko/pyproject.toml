@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bgcr-budyko"
+version = "0.1.0"
+description = "BGCR (Generalized Complementary Relationship + Budyko) evaporation estimator with distributed parameterization for heterogeneous alpine basins."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+  {name="HydroX Lab", email="example@hydrox.example"}
+]
+dependencies = [
+  "numpy>=1.23",
+  "scipy>=1.10",
+  "matplotlib>=3.7",
+  "xarray>=2023.7.0",
+  "pandas>=2.0"
+]
+
+[tool.setuptools]
+packages = ["bgcr_budyko", "bgcr_budyko.io", "bgcr_budyko.models", "bgcr_budyko.params", "bgcr_budyko.utils"]
