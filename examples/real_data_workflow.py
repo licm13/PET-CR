@@ -25,14 +25,25 @@ meteorological station data:
 
 import numpy as np
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 import warnings
+from pathlib import Path
+
+# 可选导入 matplotlib 并配置中文字体 / Optional matplotlib import and Chinese font setup
+PLOTTING_AVAILABLE = False
+try:
+    import matplotlib.pyplot as plt  # type: ignore
+    PLOTTING_AVAILABLE = True
+except Exception:
+    plt: Any = None  # type: ignore
+    PLOTTING_AVAILABLE = False
 
 try:
     from petcr import (
         sigmoid_cr, polynomial_cr, rescaled_power_cr, bouchet_cr, aa_cr,
         penman_potential_et, priestley_taylor_et,
-        vapor_pressure_deficit
+        vapor_pressure_deficit,
+        setup_chinese_font,
     )
 except ImportError:
     import sys
@@ -41,8 +52,16 @@ except ImportError:
     from petcr import (
         sigmoid_cr, polynomial_cr, rescaled_power_cr, bouchet_cr, aa_cr,
         penman_potential_et, priestley_taylor_et,
-        vapor_pressure_deficit
+        vapor_pressure_deficit,
+        setup_chinese_font,
     )
+
+# 初始化中文字体（若可用）/ Initialize Chinese font if available
+try:
+    if PLOTTING_AVAILABLE:
+        setup_chinese_font()
+except Exception:
+    pass
 
 
 class MeteoDataProcessor:
@@ -241,6 +260,8 @@ class MeteoDataProcessor:
             self.quality_control(verbose=False)
 
         # 准备数据 / Prepare data
+        # 预设质量掩码，避免类型检查警告 / preset quality mask to avoid unbound
+        good_indices = np.ones(len(self.data['temperature']), dtype=bool)
         if use_only_good_data:
             # 只使用质量良好的数据 / Use only good quality data
             good_indices = self.quality_flags['overall']
@@ -458,7 +479,7 @@ class MeteoDataProcessor:
         print(f"Exported {len(export_lines)-1} rows of data")
 
 
-def create_sample_data(n_days: int = 30) -> Dict[str, np.ndarray]:
+def create_sample_data(n_days: int = 30) -> Dict[str, Any]:
     """
     创建示例气象数据
     Create sample meteorological data
@@ -513,6 +534,105 @@ def create_sample_data(n_days: int = 30) -> Dict[str, np.ndarray]:
         'pressure': pressure,
         'dates': dates,
     }
+
+
+def plot_summary(dates: Optional[List], results: Dict[str, np.ndarray], out_dir: Path) -> Optional[Path]:
+    """
+    绘制并保存真实数据工作流的摘要图
+    Plot and save summary figures for the real data workflow results.
+
+    Parameters
+    ----------
+    dates : list
+        日期序列 / Date sequence
+    results : dict
+        计算结果字典（包含 Ep, Ew, 以及多个模型的 Ea）
+    out_dir : Path
+        输出目录 / Output directory
+
+    Returns
+    -------
+    Path or None
+        输出文件路径 / Output file path (or None if plotting unavailable)
+    """
+    if not PLOTTING_AVAILABLE:
+        print("跳过绘图（未安装matplotlib）/ Skipping plots (matplotlib not installed)")
+        return None
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # 准备数据 / Prepare data
+    ep = np.asarray(results.get('Ep'))
+    ew = np.asarray(results.get('Ew'))
+    model_keys = [k for k in results.keys() if k not in ('Ep', 'Ew', 'quality_mask')]
+    primary_model = None
+    for candidate in ['Sigmoid', 'Polynomial', 'Rescaled_Power', 'Bouchet', 'AA']:
+        if candidate in model_keys:
+            primary_model = candidate
+            break
+    if primary_model is None and model_keys:
+        primary_model = model_keys[0]
+
+    x = np.arange(len(ep))
+
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig.suptitle('真实数据工作流摘要 / Real Data Workflow Summary', fontsize=14, fontweight='bold')
+
+    # 1) 时间序列 / Time series
+    ax1 = axes[0, 0]
+    ax1.plot(x, ep, label='Ep (Penman)', linewidth=2)
+    ax1.plot(x, ew, label='Ew (P-T)', linewidth=2, linestyle='--')
+    if primary_model is not None:
+        ax1.plot(x, results[primary_model], label=f'Ea - {primary_model}', linewidth=2)
+    ax1.set_xlabel('索引 / Index')
+    ax1.set_ylabel('通量 / Flux (W/m²)')
+    ax1.set_title('时间序列 / Time Series')
+    ax1.grid(True, alpha=0.3)
+    ax1.legend(fontsize=9)
+
+    # 2) Ep/Ew 分布 / Ep/Ew distribution
+    ax2 = axes[0, 1]
+    ratio = np.where(ew != 0, ep / ew, np.nan)
+    ax2.hist(ratio[~np.isnan(ratio)], bins=20, alpha=0.7, color='#1f77b4', edgecolor='black')
+    ax2.axvline(1.0, color='red', linestyle='--', linewidth=1.5, label='Ep=Ew')
+    ax2.set_xlabel('Ep/Ew 比值 / Ratio')
+    ax2.set_ylabel('频数 / Frequency')
+    ax2.set_title('干旱指数分布 / Aridity Index Distribution')
+    ax2.legend()
+    ax2.grid(True, alpha=0.3, axis='y')
+
+    # 3) 主要模型与 Ew 的散点 / Ea vs Ew
+    ax3 = axes[1, 0]
+    if primary_model is not None:
+        ea = np.asarray(results[primary_model])
+        ax3.scatter(ew, ea, alpha=0.7, s=30)
+        lim = [0, max(np.nanmax(ew), np.nanmax(ea)) * 1.05]
+        ax3.plot(lim, lim, 'r--', linewidth=1.5, label='1:1')
+        ax3.set_xlim(lim)
+        ax3.set_ylim(lim)
+    ax3.set_xlabel('Ew (W/m²)')
+    ax3.set_ylabel('Ea (W/m²)')
+    ax3.set_title('Ea 与 Ew 的关系 / Ea vs Ew')
+    ax3.legend()
+    ax3.grid(True, alpha=0.3)
+
+    # 4) 多模型箱线图 / Box plot for multiple models
+    ax4 = axes[1, 1]
+    box_data = [np.asarray(results[k]) for k in model_keys if isinstance(results.get(k), np.ndarray)]
+    labels = [k for k in model_keys]
+    if box_data:
+        ax4.boxplot(box_data)
+        ax4.set_xticklabels(labels, rotation=15)
+    ax4.set_ylabel('Ea (W/m²)')
+    ax4.set_title('模型分布对比 / Model Distribution Comparison')
+    ax4.grid(True, alpha=0.3, axis='y')
+
+    plt.tight_layout()
+    out_path = out_dir / 'real_data_workflow_summary.png'
+    plt.savefig(str(out_path), dpi=300, bbox_inches='tight')
+    print(f"图形已保存 / Figure saved: {out_path}")
+    plt.close(fig)
+    return out_path
 
 
 def main():
@@ -570,6 +690,10 @@ def main():
 
     # 导出结果 / Export results
     # processor.export_results(filename='et_results.csv', include_dates=True)
+
+    # 绘制并保存摘要图 / Plot and save summary figure
+    figures_dir = Path(__file__).parent / 'figures'
+    plot_summary(processor.data.get('dates'), results, figures_dir)
 
     print("\n" + "=" * 80)
     print("工作流程完成! / Workflow Completed!")

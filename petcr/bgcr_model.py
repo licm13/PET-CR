@@ -268,7 +268,7 @@ def calculate_penman_components(
 
     # Available energy converted to mm/day equivalent
     # 可用能量转换为 mm/day 当量
-    Qne = (Rn - G) / latent_heat_vaporization * 86400 / 1000  # mm/day
+    Qne = (Rn - G) * 86400 / latent_heat_vaporization  # mm/day
 
     # Radiation component
     # 辐射分量
@@ -705,7 +705,7 @@ def calculate_bgcr_et(
 
     # Apparent potential evaporation
     # 表观潜在蒸发
-    Epa = Erad + Eaero
+    Epa = (Erad + Eaero) * 30.4375  # Convert from mm/day to mm/month
 
     # Step 2: Calculate Budyko parameter w
     # 步骤2：计算 Budyko 参数 w

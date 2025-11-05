@@ -25,8 +25,15 @@ import matplotlib.pyplot as plt
 from petcr import (
     calculate_pet_land,
     generate_sample_data,
-    batch_calculate_pet
+    batch_calculate_pet,
+    setup_chinese_font,
 )
+
+# 配置中文字体并修复负号显示 / Configure Chinese font and minus sign rendering
+try:
+    setup_chinese_font()
+except Exception:
+    pass
 
 
 def example_single_calculation():
@@ -129,7 +136,7 @@ def example_batch_calculation():
              'r--', label='1:1 line', linewidth=2)
     ax1.set_xlabel('PETe (mm/day)', fontsize=11)
     ax1.set_ylabel('PETa (mm/day)', fontsize=11)
-    ax1.set_title('PETe vs PETa', fontsize=12, fontweight='bold')
+    ax1.set_title('PETe 与 PETa / PETe vs PETa', fontsize=12, fontweight='bold')
     ax1.legend()
     ax1.grid(True, alpha=0.3)
     
@@ -141,7 +148,7 @@ def example_batch_calculation():
              'r--', label='1:1 line', linewidth=2)
     ax2.set_xlabel('PETe (mm/day)', fontsize=11)
     ax2.set_ylabel('Actual ET (mm/day)', fontsize=11)
-    ax2.set_title('Actual ET vs PETe', fontsize=12, fontweight='bold')
+    ax2.set_title('实际ET 与 PETe / Actual ET vs PETe', fontsize=12, fontweight='bold')
     ax2.legend()
     ax2.grid(True, alpha=0.3)
     
@@ -153,7 +160,7 @@ def example_batch_calculation():
                 linewidth=2, label=f'Mean = {np.mean(results["pete"]):.2f}')
     ax3.set_xlabel('PETe (mm/day)', fontsize=11)
     ax3.set_ylabel('Frequency', fontsize=11)
-    ax3.set_title('Distribution of PETe', fontsize=12, fontweight='bold')
+    ax3.set_title('PETe 分布 / Distribution of PETe', fontsize=12, fontweight='bold')
     ax3.legend()
     ax3.grid(True, alpha=0.3, axis='y')
     
@@ -165,19 +172,18 @@ def example_batch_calculation():
                 linewidth=2, label=f'Mean = {np.mean(results["beta_w"]):.3f}')
     ax4.set_xlabel('Wet Bowen Ratio', fontsize=11)
     ax4.set_ylabel('Frequency', fontsize=11)
-    ax4.set_title('Distribution of Wet Bowen Ratio', fontsize=12, fontweight='bold')
+    ax4.set_title('湿润波文比分布 / Distribution of Wet Bowen Ratio', fontsize=12, fontweight='bold')
     ax4.legend()
     ax4.grid(True, alpha=0.3, axis='y')
     
     plt.tight_layout()
     
-    # Save figure
-    # 保存图形
-    output_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'output')
-    os.makedirs(output_dir, exist_ok=True)
-    
-    output_path = os.path.join(output_dir, 'example_basic_results.png')
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    # Save figure 到 examples/figures / Save figure to examples/figures
+    from pathlib import Path
+    figures_dir = Path(__file__).parent / 'figures'
+    figures_dir.mkdir(parents=True, exist_ok=True)
+    output_path = figures_dir / 'example_basic_results.png'
+    plt.savefig(str(output_path), dpi=300, bbox_inches='tight')
     print(f"\nFigure saved to: {output_path}")
     
     # Uncomment to display the plot
@@ -247,7 +253,7 @@ def example_complementary_relationship():
                 label='PETa/PETe', color='red')
     ax1.set_xlabel('Moisture Index (ET/PETa)', fontsize=11)
     ax1.set_ylabel('Scaled Value', fontsize=11)
-    ax1.set_title('Complementary Relationship', fontsize=12, fontweight='bold')
+    ax1.set_title('互补关系 / Complementary Relationship', fontsize=12, fontweight='bold')
     ax1.legend(fontsize=10)
     ax1.grid(True, alpha=0.3)
     
@@ -256,7 +262,7 @@ def example_complementary_relationship():
     ax2.scatter(peta_scaled, et_scaled, alpha=0.7, s=40, color='purple')
     ax2.set_xlabel('PETa/PETe', fontsize=11)
     ax2.set_ylabel('ET/PETe', fontsize=11)
-    ax2.set_title(f'Negative Correlation (r = {np.corrcoef(et_scaled, peta_scaled)[0,1]:.3f})', 
+    ax2.set_title(f'负相关 / Negative Correlation (r = {np.corrcoef(et_scaled, peta_scaled)[0,1]:.3f})', 
                   fontsize=12, fontweight='bold')
     ax2.grid(True, alpha=0.3)
     
@@ -270,11 +276,12 @@ def example_complementary_relationship():
     
     plt.tight_layout()
     
-    # Save figure
-    # 保存图形
-    output_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'output')
-    output_path = os.path.join(output_dir, 'example_complementary_relationship.png')
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    # Save figure 到 examples/figures / Save figure to examples/figures
+    from pathlib import Path
+    figures_dir = Path(__file__).parent / 'figures'
+    figures_dir.mkdir(parents=True, exist_ok=True)
+    output_path = figures_dir / 'example_complementary_relationship.png'
+    plt.savefig(str(output_path), dpi=300, bbox_inches='tight')
     print(f"\nFigure saved to: {output_path}")
     
     plt.close()

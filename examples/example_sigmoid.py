@@ -13,15 +13,26 @@ Or run from project root: python -m examples.example_sigmoid
 """
 
 import numpy as np
+from pathlib import Path
+from typing import Any
+
+# 尝试导入 matplotlib；若不可用则仅打印结果 / Try to import matplotlib
+plt: Any = None
+try:
+    import matplotlib.pyplot as plt  # type: ignore
+    PLOTTING_AVAILABLE = True
+except ImportError:
+    plt = None  # type: ignore
+    PLOTTING_AVAILABLE = False
 
 try:
-    from petcr import sigmoid_cr, penman_potential_et, priestley_taylor_et
+    from petcr import sigmoid_cr, penman_potential_et, priestley_taylor_et, setup_chinese_font
 except ImportError:
     # Fallback for running directly without installation
     import sys
     from pathlib import Path
     sys.path.insert(0, str(Path(__file__).parent.parent))
-    from petcr import sigmoid_cr, penman_potential_et, priestley_taylor_et
+    from petcr import sigmoid_cr, penman_potential_et, priestley_taylor_et, setup_chinese_font
 
 def main():
     print("=" * 70)
@@ -83,9 +94,13 @@ def main():
     print(f"{'Beta':<10} {'Ea (W m⁻²)':<15} {'Ea/Ew':<10}")
     print("-" * 70)
     
+    ea_list = []
+    ratio_list = []
     for beta in beta_values:
         ea = sigmoid_cr(ep=ep, ew=ew, beta=beta)
         ratio = ea / ew
+        ea_list.append(float(ea))
+        ratio_list.append(float(ratio))
         print(f"{beta:<10.1f} {ea:<15.2f} {ratio:<10.3f}")
     
     print()
@@ -100,7 +115,7 @@ def main():
     ew_series = np.array([350, 350, 350, 350, 350, 350, 350])  # W m⁻²
     
     # 使用 beta = 0.5 计算实际蒸散发 / Calculate actual ET with beta=0.5
-    ea_series = sigmoid_cr(ep=ep_series, ew=ew_series, beta=0.5)
+    ea_series = np.asarray(sigmoid_cr(ep=ep_series, ew=ew_series, beta=0.5))
     
     print(f"{'Day':<6} {'Ep (W m⁻²)':<12} {'Ew (W m⁻²)':<12} {'Ea (W m⁻²)':<12} {'Ea/Ew':<10}")
     print("-" * 70)
@@ -134,6 +149,47 @@ def main():
     print("Han, S., & Tian, F. (2018). A review of the complementary principle")
     print("of evaporation. Hydrology and Earth System Sciences, 22(3), 1813-1834.")
     print("=" * 70)
+
+    # ==============================
+    # 出图并保存到 examples/figures
+    # Plot and save to examples/figures
+    # ==============================
+    if PLOTTING_AVAILABLE:
+        try:
+            setup_chinese_font()
+        except Exception:
+            pass
+
+        fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+        # 左图：不同 beta 的 Ea（柱状图）/ Left: Ea vs beta
+        ax1 = axes[0]
+        ax1.bar([str(b) for b in beta_values], ea_list, color="#1f77b4", alpha=0.85)
+        ax1.axhline(ew, color='red', linestyle='--', linewidth=1.5, label='Ew')
+        ax1.set_xlabel('β 参数 / Beta')
+        ax1.set_ylabel('Ea (W/m²)')
+        ax1.set_title('Sigmoid 模型参数对比 / Sigmoid Parameter Comparison')
+        ax1.legend()
+        ax1.grid(True, alpha=0.3, axis='y')
+
+        # 右图：7天时间序列 / Right: 7-day time series
+        ax2 = axes[1]
+        ax2.plot(range(1, days+1), ea_series, 'o-', label='Ea (β=0.5)', linewidth=2)
+        ax2.plot(range(1, days+1), ew_series, '--', label='Ew', color='k', alpha=0.6)
+        ax2.plot(range(1, days+1), ep_series, ':', label='Ep', color='#ff7f0e', alpha=0.9)
+        ax2.set_xlabel('天数 / Day')
+        ax2.set_ylabel('通量 / Flux (W/m²)')
+        ax2.set_title('时间序列对比 / Time Series Comparison')
+        ax2.legend()
+        ax2.grid(True, alpha=0.3)
+
+        plt.tight_layout()
+
+        figures_dir = Path(__file__).parent / 'figures'
+        figures_dir.mkdir(parents=True, exist_ok=True)
+        out_path = figures_dir / 'example_sigmoid_results.png'
+        plt.savefig(str(out_path), dpi=300, bbox_inches='tight')
+        print(f"图形已保存 / Figure saved: {out_path}")
 
 if __name__ == "__main__":
     main()

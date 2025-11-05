@@ -250,16 +250,21 @@ def main():
 
     # 子图4: 三种方法的年均ET对比 (归一化)
     ax4 = axes[1, 1]
-    # 转换到相同单位进行对比 (归一化到[0,1])
-    method1_normalized = np.mean(ea_sigmoid_series) / np.max([np.mean(ea_sigmoid_series),
-                                                               np.mean(et_method2_series)*28.5,
-                                                               np.mean(et_method3_series)])
-    method2_normalized = (np.mean(et_method2_series)*28.5) / np.max([np.mean(ea_sigmoid_series),
-                                                                      np.mean(et_method2_series)*28.5,
-                                                                      np.mean(et_method3_series)])
-    method3_normalized = np.mean(et_method3_series) / np.max([np.mean(ea_sigmoid_series),
-                                                               np.mean(et_method2_series)*28.5,
-                                                               np.mean(et_method3_series)])
+    # Define constants for unit conversion
+    LE_VAPORIZATION = 2.45e6  # Latent heat of vaporization [J/kg]
+    WM2_TO_MM_PER_DAY = 86400 / LE_VAPORIZATION
+    DAYS_PER_MONTH = 30.4375
+
+    # Convert all annual means to mm/month
+    method1_mm_month = np.mean(ea_sigmoid_series) * WM2_TO_MM_PER_DAY * DAYS_PER_MONTH
+    method2_mm_month = np.mean(et_method2_series) * DAYS_PER_MONTH
+    method3_mm_month = np.mean(et_method3_series)
+    
+    # Normalize based on the max value
+    max_et = np.max([method1_mm_month, method2_mm_month, method3_mm_month])
+    method1_normalized = method1_mm_month / max_et
+    method2_normalized = method2_mm_month / max_et
+    method3_normalized = method3_mm_month / max_et
 
     methods = ['方法1\nTraditional CR', '方法2\nLand-Atmos', '方法3\nBGCR-Budyko']
     values = [method1_normalized, method2_normalized, method3_normalized]
