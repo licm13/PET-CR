@@ -1003,7 +1003,7 @@ def test_latent_heat_consistency():
 
 def test_month_length_calculation():
     """Test month length calculations"""
-    from petcr.bgcr_model import get_days_in_month  # 假设已添加此函数
+    from petcr.bgcr_model import get_days_in_month  # 以下为推荐实现的测试示例 / Example test for recommended implementation
 
     # 2024 is a leap year
     assert get_days_in_month(2024, 2) == 29
