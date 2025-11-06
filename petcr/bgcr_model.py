@@ -577,11 +577,9 @@ def bgcr_monthly(
     
     # Broadcast w to match shape of P, Epa, Erad if necessary
     # 如果需要，广播 w 以匹配 P, Epa, Erad 的形状
-    if w.ndim < P.ndim:
-        # Add dimensions to w to match P
-        # 给 w 添加维度以匹配 P
-        for _ in range(P.ndim - w.ndim):
-            w = w[..., np.newaxis]
+    # Broadcast w to match shape of P
+    # 使用 numpy 的广播机制将 w 匹配到 P 的形状
+    w = np.broadcast_to(w, P.shape)
 
     # Calculate β_c using cubic solution
     # 使用三次方程解计算 β_c
