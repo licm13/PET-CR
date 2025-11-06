@@ -569,6 +569,14 @@ def bgcr_monthly(
     Epa = np.asarray(epa, dtype=float)
     Erad = np.asarray(erad, dtype=float)
     w = np.asarray(w, dtype=float)
+    
+    # Broadcast w to match shape of P, Epa, Erad if necessary
+    # 如果需要，广播 w 以匹配 P, Epa, Erad 的形状
+    if w.ndim < P.ndim:
+        # Add dimensions to w to match P
+        # 给 w 添加维度以匹配 P
+        for _ in range(P.ndim - w.ndim):
+            w = w[..., np.newaxis]
 
     # Calculate β_c using cubic solution
     # 使用三次方程解计算 β_c
