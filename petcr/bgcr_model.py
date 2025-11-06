@@ -52,6 +52,8 @@ Version / 版本: 0.3.0 (2025-01-XX)
 import numpy as np
 from typing import Union, Dict, Tuple, Optional
 
+from . import constants
+
 # ============================================================================
 # Mathematical Utilities / 数学工具函数
 # ============================================================================
@@ -85,7 +87,7 @@ def _clamp(x: np.ndarray, lo: Optional[float] = None,
 
 
 def _safe_div(a: np.ndarray, b: np.ndarray,
-              eps: float = 1e-12) -> np.ndarray:
+              eps: float = None) -> np.ndarray:
     """
     Safe division with small epsilon to avoid division by zero.
 
@@ -97,14 +99,17 @@ def _safe_div(a: np.ndarray, b: np.ndarray,
         Numerator / 分子
     b : np.ndarray
         Denominator / 分母
-    eps : float, default=1e-12
-        Small value to add to denominator / 添加到分母的小值
+    eps : float, default=None
+        Small value to add to denominator. If None, uses constant from constants module.
+        添加到分母的小值。如果为None，使用常数模块中的值。
 
     Returns
     -------
     np.ndarray
         Result of division / 除法结果
     """
+    if eps is None:
+        eps = constants.EPSILON_SAFE_DIV
     return a / (b + eps)
 
 
@@ -181,10 +186,10 @@ def _slope_svpc(temperature: Union[float, np.ndarray]) -> Union[float, np.ndarra
     T = np.asarray(temperature, dtype=float)
     # Saturation vapor pressure using Tetens equation
     # 使用 Tetens 方程计算饱和水汽压
-    es = 0.6108 * np.exp(17.27 * T / (T + 237.3))
+    es = constants.TETENS_E0_KPA * np.exp(constants.TETENS_A * T / (T + constants.TETENS_B))
     # Derivative (slope)
     # 导数（斜率）
-    delta = 4098 * es / (T + 237.3)**2
+    delta = 4098 * es / (T + constants.TETENS_B)**2
     return delta
 
 
@@ -195,9 +200,14 @@ def calculate_penman_components(
     wind_speed: Union[float, np.ndarray],
     actual_vapor_pressure: Union[float, np.ndarray],
     saturation_vapor_pressure: Union[float, np.ndarray],
-    psychrometric_constant: float = 0.066,
-    latent_heat_vaporization: float = 2.45e6
+    psychrometric_constant: float = None,
+    latent_heat_vaporization: float = None
 ) -> Tuple[np.ndarray, np.ndarray]:
+    # Maintain backward compatibility with previous default values
+    if psychrometric_constant is None:
+        psychrometric_constant = 0.066
+    if latent_heat_vaporization is None:
+        latent_heat_vaporization = 2.45e6
     """
     Calculate Penman equation components: radiation term (Erad) and
     aerodynamic term (Eaero).
@@ -222,10 +232,14 @@ def calculate_penman_components(
         Actual vapor pressure [kPa] / 实际水汽压 [kPa]
     saturation_vapor_pressure : float or np.ndarray
         Saturation vapor pressure [kPa] / 饱和水汽压 [kPa]
-    psychrometric_constant : float, default=0.066
+    psychrometric_constant : float, default=None
         Psychrometric constant [kPa/°C] / 干湿表常数 [kPa/°C]
-    latent_heat_vaporization : float, default=2.45e6
+        If None, uses 0.066 kPa/°C (standard at sea level).
+        如果为None，使用0.066 kPa/°C（海平面标准值）。
+    latent_heat_vaporization : float, default=None
         Latent heat of vaporization [J/kg] / 汽化潜热 [J/kg]
+        If None, uses constant from constants module (2.45e6 J/kg).
+        如果为None，使用常数模块中的值（2.45e6 J/kg）。
 
     Returns
     -------
@@ -249,6 +263,12 @@ def calculate_penman_components(
     Penman, H. L. (1948). Natural evaporation from open water, bare soil
     and grass. Proceedings of the Royal Society of London. Series A.
     """
+    # Use defaults if not provided / 如果未提供则使用默认值
+    if psychrometric_constant is None:
+        psychrometric_constant = 0.066  # kPa/°C at sea level
+    if latent_heat_vaporization is None:
+        latent_heat_vaporization = constants.LV_WATER  # J/kg
+    
     # Convert inputs to arrays
     # 将输入转换为数组
     T = np.asarray(temperature, dtype=float)
@@ -268,7 +288,7 @@ def calculate_penman_components(
 
     # Available energy converted to mm/day equivalent
     # 可用能量转换为 mm/day 当量
-    Qne = (Rn - G) * 86400 / latent_heat_vaporization  # mm/day
+    Qne = (Rn - G) * constants.SECONDS_PER_DAY / latent_heat_vaporization  # mm/day
 
     # Radiation component
     # 辐射分量
@@ -554,6 +574,12 @@ def bgcr_monthly(
     Epa = np.asarray(epa, dtype=float)
     Erad = np.asarray(erad, dtype=float)
     w = np.asarray(w, dtype=float)
+    
+    # Broadcast w to match shape of P, Epa, Erad if necessary
+    # 如果需要，广播 w 以匹配 P, Epa, Erad 的形状
+    # Broadcast w to match shape of P
+    # 使用 numpy 的广播机制将 w 匹配到 P 的形状
+    w = np.broadcast_to(w, P.shape)
 
     # Calculate β_c using cubic solution
     # 使用三次方程解计算 β_c
@@ -596,7 +622,8 @@ def calculate_bgcr_et(
     albedo: Optional[Union[float, np.ndarray]] = None,
     ground_heat_flux: Union[float, np.ndarray] = 0.0,
     psychrometric_constant: float = 0.066,
-    use_dual_scheme: bool = True
+    use_dual_scheme: bool = True,
+    days_in_month: Union[int, float, np.ndarray] = None
 ) -> Dict[str, np.ndarray]:
     """
     High-level function to calculate actual ET using BGCR model.
@@ -639,6 +666,11 @@ def calculate_bgcr_et(
     use_dual_scheme : bool, default=True
         Use dual-variable (SI+albedo) scheme for w. If False, uses single-variable (SI only) /
         使用双变量（SI+反照率）方案计算 w。如果为 False，使用单变量（仅 SI）
+    days_in_month : int, float, or np.ndarray, default=None
+        Number of days in the calculation period. If None, uses average month length (30.4375).
+        For precise calculations, use actual month lengths (28-31 for monthly data).
+        计算周期的天数。如果为None，使用平均月长度（30.4375）。
+        对于精确计算，使用实际月长度（月度数据为28-31）。
 
     Returns
     -------
@@ -691,6 +723,10 @@ def calculate_bgcr_et(
     calculate_penman_components : Penman equation components / Penman 方程分量
     calculate_budyko_w_from_SI_albedo : Budyko parameter schemes / Budyko 参数方案
     """
+    # Use default days in month if not provided / 如果未提供则使用默认月长度
+    if days_in_month is None:
+        days_in_month = constants.DAYS_PER_MONTH_AVG
+    
     # Step 1: Calculate Penman components
     # 步骤1：计算 Penman 分量
     Erad, Eaero = calculate_penman_components(
@@ -705,7 +741,7 @@ def calculate_bgcr_et(
 
     # Apparent potential evaporation
     # 表观潜在蒸发
-    Epa = (Erad + Eaero) * 30.4375  # Convert from mm/day to mm/month
+    Epa = (Erad + Eaero) * days_in_month  # Convert from mm/day to mm/period
 
     # Step 2: Calculate Budyko parameter w
     # 步骤2：计算 Budyko 参数 w

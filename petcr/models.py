@@ -14,6 +14,7 @@ Power, Bouchet, and Advection-Aridity (A-A) formulations.
 import numpy as np
 from typing import Optional, Union
 
+
 ArrayLike = Union[float, np.ndarray]
 
 def _to_numpy(value: ArrayLike) -> np.ndarray:
@@ -148,7 +149,8 @@ def polynomial_cr(ep: ArrayLike,
     ratio = ep_arr / ew_arr
     # Apply polynomial CR relationship / 应用多项式互补公式
     ea = ew_arr * (2.0 - np.power(ratio, b))
-    return np.maximum(ea, 0.0)
+    # Ensure 0 <= Ea <= Ew / 确保 0 <= Ea <= Ew
+    return np.clip(ea, 0.0, ew_arr)
 
 
 def rescaled_power_cr(ep: ArrayLike,
@@ -240,7 +242,8 @@ def bouchet_cr(ep: ArrayLike, ew: ArrayLike) -> ArrayLike:
     ep_arr = _to_numpy(ep)
     ew_arr = _to_numpy(ew)
     ea = 2.0 * ew_arr - ep_arr
-    return np.maximum(ea, 0.0)
+    # Ensure 0 <= Ea <= Ew / 确保 0 <= Ea <= Ew
+    return np.clip(ea, 0.0, ew_arr)
 
 
 def aa_cr(ep: ArrayLike,
