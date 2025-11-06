@@ -30,7 +30,6 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from petcr import calculate_bgcr_et
-from petcr.constants import DAYS_PER_MONTH_AVG
 
 # ============================================================================
 # Configuration / 配置
