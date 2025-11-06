@@ -499,4 +499,4 @@ def main():
 
 
 if __name__ == '__main__':
-    data, calib_results, uncert_results = main()
+    main()
