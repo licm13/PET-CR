@@ -203,6 +203,11 @@ def calculate_penman_components(
     psychrometric_constant: float = None,
     latent_heat_vaporization: float = None
 ) -> Tuple[np.ndarray, np.ndarray]:
+    # Maintain backward compatibility with previous default values
+    if psychrometric_constant is None:
+        psychrometric_constant = 0.066
+    if latent_heat_vaporization is None:
+        latent_heat_vaporization = 2.45e6
     """
     Calculate Penman equation components: radiation term (Erad) and
     aerodynamic term (Eaero).
