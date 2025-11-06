@@ -31,6 +31,8 @@ All functions use SI units unless otherwise specified.
 import numpy as np
 from typing import Union
 
+from . import constants
+
 # Type alias for array-like inputs
 ArrayLike = Union[float, np.ndarray]
 
@@ -73,7 +75,9 @@ def calculate_saturation_vapor_pressure(temperature: ArrayLike) -> ArrayLike:
     array([ 611.21..., 1228.09..., 2337.08..., 4243.50...])
     """
     # Tetens方程计算饱和水汽压 / Tetens equation for saturation vapor pressure
-    return 611.0 * np.exp((17.27 * temperature) / (temperature + 237.3))
+    return constants.TETENS_E0_PA * np.exp(
+        (constants.TETENS_A * temperature) / (temperature + constants.TETENS_B)
+    )
 
 
 def calculate_slope_svp(temperature: ArrayLike) -> ArrayLike:
@@ -115,13 +119,13 @@ def calculate_slope_svp(temperature: ArrayLike) -> ArrayLike:
     # 计算饱和水汽压 / Calculate saturation vapor pressure
     es = calculate_saturation_vapor_pressure(temperature)
     # 计算斜率 / Calculate slope
-    return 4098.0 * es / ((temperature + 237.3) ** 2)
+    return 4098.0 * es / ((temperature + constants.TETENS_B) ** 2)
 
 
 def calculate_psychrometric_constant(pressure: ArrayLike,
-                                     specific_heat: float = 1013.0,
-                                     latent_heat: float = 2.45e6,
-                                     mw_ratio: float = 0.622) -> ArrayLike:
+                                     specific_heat: float = None,
+                                     latent_heat: float = None,
+                                     mw_ratio: float = None) -> ArrayLike:
     """Compute the psychrometric constant.
 
     计算干湿表常数，用于连接能量项和空气动力学项。
@@ -132,14 +136,17 @@ def calculate_psychrometric_constant(pressure: ArrayLike,
         Atmospheric pressure in pascals (Pa).
         大气压强，单位帕。
     specific_heat : float, optional
-        Specific heat of air at constant pressure [J kg⁻¹ K⁻¹], default 1013.0.
-        定压比热，默认1013.0 J kg⁻¹ K⁻¹。
+        Specific heat of air at constant pressure [J kg⁻¹ K⁻¹].
+        If None, uses constant from constants module (1013.0).
+        定压比热。如果为None，使用常数模块中的值（1013.0）。
     latent_heat : float, optional
-        Latent heat of vaporization [J kg⁻¹], default 2.45e6.
-        汽化潜热，默认值2.45e6 J kg⁻¹ (约20°C)。
+        Latent heat of vaporization [J kg⁻¹].
+        If None, uses constant from constants module (2.45e6).
+        汽化潜热。如果为None，使用常数模块中的值（2.45e6）。
     mw_ratio : float, optional
-        Molecular weight ratio of water vapour to dry air [-], default 0.622.
-        水汽与干空气的分子量比，默认0.622。
+        Molecular weight ratio of water vapour to dry air [-].
+        If None, uses constant from constants module (0.62198).
+        水汽与干空气的分子量比。如果为None，使用常数模块中的值（0.62198）。
 
     Returns 返回
     ----------
@@ -158,7 +165,61 @@ def calculate_psychrometric_constant(pressure: ArrayLike,
     -----------------
     Allen et al. (1998) FAO-56 指南 / Allen等 (1998) FAO-56 Manual.
     """
+    if specific_heat is None:
+        specific_heat = constants.CP_AIR
+    if latent_heat is None:
+        latent_heat = constants.LV_WATER
+    if mw_ratio is None:
+        mw_ratio = constants.EPSILON_MOLWEIGHT
+    
     return (specific_heat * pressure) / (mw_ratio * latent_heat)
+
+
+def calculate_latent_heat_vaporization(temperature: ArrayLike) -> ArrayLike:
+    """
+    计算温度依赖的汽化潜热
+    Calculate temperature-dependent latent heat of vaporization.
+
+    参数 / Parameters
+    ----------
+    temperature : float or array_like
+        气温 [°C] / Air temperature [°C]
+
+    返回 / Returns
+    -------
+    float or array_like
+        汽化潜热 [J/kg] / Latent heat of vaporization [J/kg]
+
+    说明 / Notes
+    -----
+    使用温度的多项式近似（FAO-56）：
+    Uses polynomial approximation as a function of temperature (FAO-56):
+
+    .. math::
+        L_v = 2500800 - 2360 T + 1.6 T^2 - 0.06 T^3
+
+    其中T为摄氏温度，L_v单位为J/kg
+    where T is temperature in °C and L_v is in J/kg.
+
+    参考文献 / References
+    ----------
+    .. [1] Allen et al. (1998) FAO-56
+    .. [2] Harrison, L.P. (1963). Fundamental concepts and definitions
+           relating to humidity. In: Humidity and Moisture, Vol. 3.
+
+    示例 / Examples
+    --------
+    >>> calculate_latent_heat_vaporization(20.0)
+    2453600.0
+    >>> calculate_latent_heat_vaporization(np.array([0, 10, 20, 30]))
+    array([2500800., 2477200., 2453600., 2430000.])
+    """
+    temp_celsius = np.asarray(temperature, dtype=float)
+    # Polynomial approximation for latent heat / 潜热的多项式近似
+    lv = (2500800.0 - 2360.0 * temp_celsius +
+          1.6 * temp_celsius**2 -
+          0.06 * temp_celsius**3)
+    return lv
 
 
 def vapor_pressure_deficit(temperature: ArrayLike,
@@ -200,7 +261,7 @@ def priestley_taylor_et(net_radiation: ArrayLike,
                        ground_heat_flux: ArrayLike,
                        temperature: ArrayLike,
                        pressure: ArrayLike,
-                       alpha: float = 1.26) -> ArrayLike:
+                       alpha: float = None) -> ArrayLike:
     """
     计算Priestley-Taylor潜在蒸散发
     Calculate Priestley-Taylor potential evapotranspiration.
@@ -216,7 +277,9 @@ def priestley_taylor_et(net_radiation: ArrayLike,
     pressure : float or array_like
         大气压强 [Pa] / Atmospheric pressure [Pa]
     alpha : float, optional
-        Priestley-Taylor系数 [-]，默认1.26 / Priestley-Taylor coefficient [-]. Default is 1.26.
+        Priestley-Taylor系数 [-]，默认1.26 / Priestley-Taylor coefficient [-].
+        If None, uses constant from constants module (1.26).
+        如果为None，使用常数模块中的值（1.26）。
 
     返回 / Returns
     -------
@@ -253,6 +316,9 @@ def priestley_taylor_et(net_radiation: ArrayLike,
     >>> priestley_taylor_et(500.0, 50.0, 20.0, 101325.0)
     309.48...
     """
+    if alpha is None:
+        alpha = constants.PRIESTLEY_TAYLOR_ALPHA
+    
     # 计算饱和水汽压曲线斜率 / Calculate slope of saturation vapor pressure curve
     delta = calculate_slope_svp(temperature)
     # 计算干湿表常数 / Calculate psychrometric constant
@@ -339,8 +405,12 @@ def penman_potential_et(net_radiation: ArrayLike,
     334.78...
     """
     # 物理常数 / Physical constants
-    specific_heat = 1013.0  # 空气比热 / Specific heat of air [J kg⁻¹ K⁻¹]
-    air_density = 1.225  # 空气密度 / Air density [kg m⁻³] (at sea level, 15°C)
+    specific_heat = constants.CP_AIR  # 空气比热 / Specific heat of air [J kg⁻¹ K⁻¹]
+    
+    # 计算空气密度（从理想气体定律）/ Calculate air density from ideal gas law
+    # ρ = P / (R_specific × T)
+    temperature_kelvin = temperature + constants.KELVIN_TO_CELSIUS_OFFSET
+    air_density = pressure / (constants.R_SPECIFIC_DRY_AIR * temperature_kelvin)
 
     # 计算所需变量 / Calculate required variables
     delta = calculate_slope_svp(temperature)  # 饱和水汽压曲线斜率 / Slope of SVP curve
@@ -349,7 +419,7 @@ def penman_potential_et(net_radiation: ArrayLike,
 
     # 计算空气动力学阻抗（简化形式）/ Calculate aerodynamic resistance (simplified form)
     # ra = 208 / u 适用于2米高度的参考草地 / for reference grass at 2m height
-    aerodynamic_resistance = 208.0 / wind_speed
+    aerodynamic_resistance = constants.PENMAN_WIND_COEFF / wind_speed
 
     # 可用能量 / Available energy
     available_energy = net_radiation - ground_heat_flux
