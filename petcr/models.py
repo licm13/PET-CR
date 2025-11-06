@@ -14,7 +14,6 @@ Power, Bouchet, and Advection-Aridity (A-A) formulations.
 import numpy as np
 from typing import Optional, Union
 
-from . import constants
 
 ArrayLike = Union[float, np.ndarray]
 
