@@ -54,15 +54,17 @@ except ImportError:
     print("安装命令 / Install with: pip install matplotlib\n")
 
 
-def generate_climate_scenarios(days: int = 365) -> Dict[str, Dict[str, np.ndarray]]:
+def generate_climate_scenarios(days: int = 10950, include_extreme_event: bool = True) -> Dict[str, Dict[str, np.ndarray]]:
     """
-    生成不同气候条件的模拟数据
-    Generate synthetic data for different climate conditions
+    生成不同气候条件的模拟数据（支持30年时序和极端事件）
+    Generate synthetic data for different climate conditions (supports 30-year time series and extreme events)
 
     Parameters
     ----------
     days : int
-        模拟天数 / Number of days to simulate
+        模拟天数 / Number of days to simulate (default: 10950 = 30 years)
+    include_extreme_event : bool
+        是否包含热浪干旱事件 / Whether to include heatwave-drought event (default: True)
 
     Returns
     -------
@@ -76,16 +78,31 @@ def generate_climate_scenarios(days: int = 365) -> Dict[str, Dict[str, np.ndarra
 
     # 时间序列 (天) / Time series (days)
     t = np.arange(days)
+    years = days / 365.25
 
     scenarios = {}
 
+    # 添加长期变暖趋势 / Add long-term warming trend
+    warming_trend = 0.04 * t / 365.25  # ~0.04°C/year, ~1.2°C over 30 years
+
+    # 定义极端事件时间窗口（第15年夏季，持续15天）
+    # Define extreme event time window (year 15 summer, 15-day duration)
+    extreme_start = int(15 * 365.25)  # Year 15
+    extreme_duration = 15  # days
+    extreme_end = extreme_start + extreme_duration
+
     # 1. 湿润气候 (季风气候) / Humid climate (Monsoon)
     # 特征：高降水，Ep < Ew 较多
-    temp_humid = 25 + 5 * np.sin(2 * np.pi * t / 365)  # 20-30°C
-    rh_humid = 70 + 15 * np.sin(2 * np.pi * t / 365)  # 55-85%
-    radiation_humid = 400 + 150 * np.sin(2 * np.pi * t / 365)  # W/m²
+    temp_humid = 25 + 5 * np.sin(2 * np.pi * t / 365.25) + warming_trend  # 20-30°C + trend
+    rh_humid = 70 + 15 * np.sin(2 * np.pi * t / 365.25)  # 55-85%
+    radiation_humid = 400 + 150 * np.sin(2 * np.pi * t / 365.25)  # W/m²
     wind_humid = 1.5 + 0.5 * np.random.randn(days) * 0.3  # 较低风速
     wind_humid = np.maximum(wind_humid, 0.5)
+
+    # 添加热浪干旱事件 / Add heatwave-drought event
+    if include_extreme_event:
+        temp_humid[extreme_start:extreme_end] += 5.0  # +5°C heatwave
+        rh_humid[extreme_start:extreme_end] -= 20.0  # -20% humidity drop
 
     scenarios['湿润气候 / Humid'] = {
         'temperature': temp_humid,
@@ -97,11 +114,15 @@ def generate_climate_scenarios(days: int = 365) -> Dict[str, Dict[str, np.ndarra
 
     # 2. 半干旱气候 / Semi-arid climate
     # 特征：中等降水，Ep ≈ Ew
-    temp_semiarid = 22 + 10 * np.sin(2 * np.pi * t / 365)  # 12-32°C
-    rh_semiarid = 45 + 15 * np.sin(2 * np.pi * t / 365 + np.pi)  # 30-60%
-    radiation_semiarid = 500 + 200 * np.sin(2 * np.pi * t / 365)
+    temp_semiarid = 22 + 10 * np.sin(2 * np.pi * t / 365.25) + warming_trend  # 12-32°C + trend
+    rh_semiarid = 45 + 15 * np.sin(2 * np.pi * t / 365.25 + np.pi)  # 30-60%
+    radiation_semiarid = 500 + 200 * np.sin(2 * np.pi * t / 365.25)
     wind_semiarid = 2.5 + 0.5 * np.random.randn(days) * 0.4
     wind_semiarid = np.maximum(wind_semiarid, 1.0)
+
+    if include_extreme_event:
+        temp_semiarid[extreme_start:extreme_end] += 5.0
+        rh_semiarid[extreme_start:extreme_end] -= 20.0
 
     scenarios['半干旱 / Semi-arid'] = {
         'temperature': temp_semiarid,
@@ -113,11 +134,15 @@ def generate_climate_scenarios(days: int = 365) -> Dict[str, Dict[str, np.ndarra
 
     # 3. 干旱气候 (沙漠) / Arid climate (Desert)
     # 特征：极少降水，Ep >> Ew
-    temp_arid = 28 + 12 * np.sin(2 * np.pi * t / 365)  # 16-40°C
-    rh_arid = 30 + 10 * np.sin(2 * np.pi * t / 365 + np.pi)  # 20-40%
-    radiation_arid = 600 + 250 * np.sin(2 * np.pi * t / 365)
+    temp_arid = 28 + 12 * np.sin(2 * np.pi * t / 365.25) + warming_trend  # 16-40°C + trend
+    rh_arid = 30 + 10 * np.sin(2 * np.pi * t / 365.25 + np.pi)  # 20-40%
+    radiation_arid = 600 + 250 * np.sin(2 * np.pi * t / 365.25)
     wind_arid = 3.5 + 0.8 * np.random.randn(days) * 0.5  # 高风速
     wind_arid = np.maximum(wind_arid, 1.5)
+
+    if include_extreme_event:
+        temp_arid[extreme_start:extreme_end] += 5.0
+        rh_arid[extreme_start:extreme_end] -= 20.0
 
     scenarios['干旱 / Arid'] = {
         'temperature': temp_arid,
@@ -129,11 +154,15 @@ def generate_climate_scenarios(days: int = 365) -> Dict[str, Dict[str, np.ndarra
 
     # 4. 温带海洋性气候 / Temperate oceanic climate
     # 特征：温和湿润，变化平缓
-    temp_oceanic = 15 + 8 * np.sin(2 * np.pi * t / 365)  # 7-23°C
-    rh_oceanic = 75 + 10 * np.sin(2 * np.pi * t / 365)  # 65-85%
-    radiation_oceanic = 350 + 120 * np.sin(2 * np.pi * t / 365)
+    temp_oceanic = 15 + 8 * np.sin(2 * np.pi * t / 365.25) + warming_trend  # 7-23°C + trend
+    rh_oceanic = 75 + 10 * np.sin(2 * np.pi * t / 365.25)  # 65-85%
+    radiation_oceanic = 350 + 120 * np.sin(2 * np.pi * t / 365.25)
     wind_oceanic = 3.0 + 0.6 * np.random.randn(days) * 0.4
     wind_oceanic = np.maximum(wind_oceanic, 1.5)
+
+    if include_extreme_event:
+        temp_oceanic[extreme_start:extreme_end] += 5.0
+        rh_oceanic[extreme_start:extreme_end] -= 20.0
 
     scenarios['温带海洋 / Oceanic'] = {
         'temperature': temp_oceanic,
@@ -143,11 +172,24 @@ def generate_climate_scenarios(days: int = 365) -> Dict[str, Dict[str, np.ndarra
         'description': '海洋性气候，温和湿润 / Oceanic climate, mild and humid'
     }
 
-    print(f"已生成 {len(scenarios)} 个气候场景，每个场景 {days} 天数据")
-    print(f"Generated {len(scenarios)} climate scenarios, {days} days each")
+    print(f"已生成 {len(scenarios)} 个气候场景，每个场景 {days} 天数据 ({years:.1f} 年)")
+    print(f"Generated {len(scenarios)} climate scenarios, {days} days each ({years:.1f} years)")
+    if include_extreme_event:
+        print(f"包含极端事件: 第{extreme_start/365.25:.1f}年，持续{extreme_duration}天 (+5°C, -20% RH)")
+        print(f"Extreme event included: Year {extreme_start/365.25:.1f}, {extreme_duration} days duration (+5°C, -20% RH)")
     print()
 
-    return scenarios
+    # 添加极端事件元数据 / Add extreme event metadata
+    metadata = {
+        'days': days,
+        'years': years,
+        'extreme_event': include_extreme_event,
+        'extreme_start': extreme_start if include_extreme_event else None,
+        'extreme_end': extreme_end if include_extreme_event else None,
+        'extreme_duration': extreme_duration if include_extreme_event else None
+    }
+
+    return scenarios, metadata
 
 
 def calculate_et_for_scenario(scenario_data: Dict[str, np.ndarray],
@@ -365,10 +407,10 @@ def seasonal_analysis(et_results: Dict[str, np.ndarray], days: int = 365) -> Dic
     return seasonal_stats
 
 
-def plot_results(scenarios: Dict, all_results: Dict, sensitivity_results: Dict):
+def plot_results(scenarios: Dict, all_results: Dict, sensitivity_results: Dict, metadata: Dict):
     """
-    绘制分析结果
-    Plot analysis results
+    绘制分析结果（增强版，支持长时序和极端事件）
+    Plot analysis results (enhanced version with long time series and extreme events)
     """
     if not PLOTTING_AVAILABLE:
         print("跳过绘图 (matplotlib未安装) / Skipping plots (matplotlib not installed)")
@@ -379,8 +421,8 @@ def plot_results(scenarios: Dict, all_results: Dict, sensitivity_results: Dict):
     print("=" * 80)
     print()
 
-    # 创建图形 / Create figure
-    fig = plt.figure(figsize=(16, 12))
+    # 创建图形（扩展为3x3布局以容纳更多图表）/ Create figure (expanded to 3x3 layout for more plots)
+    fig = plt.figure(figsize=(18, 16))
 
     # 1. 不同气候条件下的时间序列对比 / Time series comparison
     ax1 = plt.subplot(3, 2, 1)
@@ -498,16 +540,18 @@ def main():
     print("=" * 80)
     print()
     print("本示例展示: / This example demonstrates:")
-    print("  1. 多气候场景分析 / Multi-climate scenario analysis")
-    print("  2. 参数敏感性分析 / Parameter sensitivity analysis")
-    print("  3. 季节变化分析 / Seasonal variation analysis")
-    print("  4. 模型不确定性评估 / Model uncertainty assessment")
-    print("  5. 综合统计分析 / Comprehensive statistical analysis")
+    print("  1. 多气候场景分析 (30年时序) / Multi-climate scenario analysis (30-year time series)")
+    print("  2. 长期变暖趋势分析 / Long-term warming trend analysis")
+    print("  3. 极端事件响应分析 / Extreme event response analysis")
+    print("  4. 参数敏感性分析 / Parameter sensitivity analysis")
+    print("  5. 季节变化分析 / Seasonal variation analysis")
+    print("  6. 模型不确定性评估 / Model uncertainty assessment")
+    print("  7. 干旱指数与不确定性关系 / Aridity index vs. uncertainty relationship")
     print()
 
     # 生成气候场景 / Generate climate scenarios
-    days = 365  # 一年的数据 / One year of data
-    scenarios = generate_climate_scenarios(days)
+    days = 10950  # 30年的数据 / 30 years of data
+    scenarios, metadata = generate_climate_scenarios(days, include_extreme_event=True)
 
     # 为每个场景计算ET / Calculate ET for each scenario
     print("=" * 80)
@@ -569,8 +613,119 @@ def main():
 
     print()
 
+    # 长时序趋势分析 / Long-term trend analysis
+    print("=" * 80)
+    print("长时序趋势分析 / Long-term Trend Analysis")
+    print("=" * 80)
+    print()
+
+    for scenario_name, results in all_results.items():
+        print(f"\n{scenario_name}:")
+        print("-" * 80)
+
+        # 计算年均值 / Calculate annual means
+        n_years = int(metadata['years'])
+        yearly_ea = []
+        yearly_ep = []
+        yearly_ew = []
+
+        for year in range(n_years):
+            start_idx = int(year * 365.25)
+            end_idx = int((year + 1) * 365.25)
+            yearly_ea.append(np.mean(results['Sigmoid_β0.5'][start_idx:end_idx]))
+            yearly_ep.append(np.mean(results['Ep'][start_idx:end_idx]))
+            yearly_ew.append(np.mean(results['Ew'][start_idx:end_idx]))
+
+        yearly_ea = np.array(yearly_ea)
+        yearly_ep = np.array(yearly_ep)
+        yearly_ew = np.array(yearly_ew)
+
+        # 计算线性趋势 / Calculate linear trend
+        years_array = np.arange(n_years)
+        ea_trend = np.polyfit(years_array, yearly_ea, 1)[0]  # W/m²/year
+        ep_trend = np.polyfit(years_array, yearly_ep, 1)[0]
+        ew_trend = np.polyfit(years_array, yearly_ew, 1)[0]
+
+        print(f"  Ea (Sigmoid) 趋势 / trend: {ea_trend:.3f} W/m²/year")
+        print(f"  Ep 趋势 / trend: {ep_trend:.3f} W/m²/year")
+        print(f"  Ew 趋势 / trend: {ew_trend:.3f} W/m²/year")
+        print(f"  30年总变化 / 30-year change: {ea_trend*30:.2f} W/m² (Ea)")
+
+    print()
+
+    # 极端事件响应分析 / Extreme event response analysis
+    if metadata['extreme_event']:
+        print("=" * 80)
+        print("极端事件响应分析 / Extreme Event Response Analysis")
+        print("=" * 80)
+        print()
+
+        extreme_start = metadata['extreme_start']
+        extreme_end = metadata['extreme_end']
+
+        # 定义基准期和恢复期 / Define baseline and recovery periods
+        baseline_start = extreme_start - 30
+        baseline_end = extreme_start
+        recovery_start = extreme_end
+        recovery_end = extreme_end + 30
+
+        for scenario_name, results in all_results.items():
+            print(f"\n{scenario_name}:")
+            print("-" * 80)
+
+            # 提取不同时期的数据 / Extract data for different periods
+            baseline_ea = np.mean(results['Sigmoid_β0.5'][baseline_start:baseline_end])
+            extreme_ea = np.mean(results['Sigmoid_β0.5'][extreme_start:extreme_end])
+            recovery_ea = np.mean(results['Sigmoid_β0.5'][recovery_start:recovery_end])
+
+            baseline_ratio = np.mean(results['Ep'][baseline_start:baseline_end] / results['Ew'][baseline_start:baseline_end])
+            extreme_ratio = np.mean(results['Ep'][extreme_start:extreme_end] / results['Ew'][extreme_start:extreme_end])
+
+            # 计算响应 / Calculate responses
+            ea_drop = ((extreme_ea - baseline_ea) / baseline_ea) * 100  # %
+            ea_recovery = ((recovery_ea - baseline_ea) / baseline_ea) * 100  # %
+
+            print(f"  基准期 Ea / Baseline Ea: {baseline_ea:.2f} W/m²")
+            print(f"  极端期 Ea / Extreme Ea: {extreme_ea:.2f} W/m² ({ea_drop:+.1f}%)")
+            print(f"  恢复期 Ea / Recovery Ea: {recovery_ea:.2f} W/m² ({ea_recovery:+.1f}%)")
+            print(f"  Ep/Ew 变化 / Ep/Ew change: {baseline_ratio:.3f} → {extreme_ratio:.3f}")
+
+        print()
+
+    # 干旱指数与模型不确定性关系分析 / Aridity index vs. uncertainty analysis
+    print("=" * 80)
+    print("干旱指数与模型不确定性关系 / Aridity Index vs. Model Uncertainty")
+    print("=" * 80)
+    print()
+
+    for scenario_name, results in all_results.items():
+        print(f"\n{scenario_name}:")
+        print("-" * 80)
+
+        # 计算干旱指数 / Calculate aridity index
+        aridity_index = results['Ep'] / results['Ew']
+
+        # 提取所有CR模型结果 / Extract all CR model results
+        model_names = ['Sigmoid_β0.5', 'Polynomial_b2', 'Rescaled_Power', 'Bouchet', 'AA']
+        ea_values = np.array([results[name] for name in model_names])
+
+        # 计算模型间标准差 / Calculate inter-model standard deviation
+        model_std = np.std(ea_values, axis=0)
+        model_cv = model_std / np.mean(ea_values, axis=0) * 100  # Coefficient of variation (%)
+
+        # 按干旱指数分组分析 / Analyze by aridity index bins
+        ai_bins = [0.5, 0.8, 1.0, 1.2, 1.5, 2.0]
+        for i in range(len(ai_bins) - 1):
+            mask = (aridity_index >= ai_bins[i]) & (aridity_index < ai_bins[i+1])
+            if np.sum(mask) > 0:
+                mean_cv = np.mean(model_cv[mask])
+                print(f"  Ep/Ew ∈ [{ai_bins[i]:.1f}, {ai_bins[i+1]:.1f}): "
+                      f"模型不确定性 / Model CV = {mean_cv:.2f}%")
+
+    print()
+
     # 绘制结果 / Plot results
-    plot_results(scenarios, all_results, sensitivity_results)
+    plot_results(scenarios, all_results, sensitivity_results, metadata)
 
     # 总结和建议 / Summary and recommendations
     print("=" * 80)
