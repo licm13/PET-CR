@@ -40,6 +40,8 @@ The approach calculates two complementary PET estimates by analyzing energy flux
 import numpy as np
 from typing import Union, Dict, Tuple
 
+from . import constants
+
 # 类型别名 / Type alias
 ArrayLike = Union[float, np.ndarray]
 
@@ -162,7 +164,7 @@ def calculate_actual_vapor_pressure(
     mixing_ratio = specific_humidity / (1.0 - specific_humidity)
 
     # 从混合比计算水汽压 / Calculate vapor pressure from mixing ratio
-    vapor_pressure = mixing_ratio / (mixing_ratio + 0.622) * (air_pressure / 1000.0)
+    vapor_pressure = mixing_ratio / (mixing_ratio + constants.EPSILON_MOLWEIGHT) * (air_pressure / 1000.0)
 
     return vapor_pressure
 
@@ -203,8 +205,8 @@ def calculate_psychrometric_constant_land(
     >>> calculate_psychrometric_constant_land(lv, 101325.0)
     0.0668...
     """
-    cp = 1.005e-3  # 空气定压比热 (MJ/(kg·K)) / Specific heat of air at constant pressure
-    gamma = cp / (latent_heat * 0.622) * (air_pressure / 1000.0)
+    cp = constants.CP_AIR / 1e6  # 转换为 MJ/(kg·K) / Convert to MJ/(kg·K)
+    gamma = cp / (latent_heat * constants.EPSILON_MOLWEIGHT) * (air_pressure / 1000.0)
     return gamma
 
 
