@@ -214,6 +214,15 @@ from .utils import (
 )
 
 # ============================================================================
+# 亚日尺度 GCP 模型 / Sub-daily GCP Model
+# ============================================================================
+from .subdaily import (
+    SurfaceRoughness,
+    calculate_subdaily_gcp_et,
+    calibrate_subdaily_beta_c,
+)
+
+# ============================================================================
 # 公共API / Public API
 # ============================================================================
 __all__ = [
@@ -267,4 +276,9 @@ __all__ = [
     'load_fluxnet_data',
     'load_cmip6_data',
     'setup_chinese_font',
+
+    # 亚日尺度 GCP 模型 / Sub-daily GCP Model
+    'SurfaceRoughness',
+    'calculate_subdaily_gcp_et',
+    'calibrate_subdaily_beta_c',
 ]
