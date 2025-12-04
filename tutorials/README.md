@@ -88,7 +88,7 @@ These tutorials are perfect for:
 
 ```bash
 # Clone the repository (if not done)
-git clone https://github.com/your-username/PET-CR.git
+git clone https://github.com/shazhou/PET-CR.git
 cd PET-CR
 
 # Install required packages
