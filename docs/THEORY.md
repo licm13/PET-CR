@@ -328,14 +328,10 @@ $$
 
 | 模型 Model | 公式 Formula | 参数数量 Parameters | 优点 Advantages | 缺点 Disadvantages |
 |-----------|-------------|---------------------|----------------|-------------------|
-| **Bouchet** | $E_a = 2E_w - E_p$ | 0 | 最简单；理论完美 | 过于理想化 |
-| | | | Simplest; theoretically perfect | Too idealized |
-| **Sigmoid** | $E_a = \\frac{2\\beta E_w}{1 + e^{(E_p-E_w)/(\\beta E_w)}}$ | 1 ($\\beta$) | 灵活；可校准 | 需要实测数据 |
-| | | | Flexible; calibratable | Needs observations |
-| **Polynomial** | 二次方程 | 0 | 物理基础强 | 数学复杂 |
-| | Quadratic | | Strong physics | Math complex |
-| **AA (Advection-Aridity)** | $E_a = E_w \\frac{2E_p - E_w}{E_p}$ | 0 | 适用于平原 | 对地形敏感 |
-| | | | Good for plains | Terrain-sensitive |
+| **Bouchet** | $E_a = 2E_w - E_p$ | 0 | 最简单；理论完美<br>Simplest; theoretically perfect | 过于理想化<br>Too idealized |
+| **Sigmoid** | $E_a = \frac{2\beta E_w}{1 + e^{(E_p-E_w)/(\beta E_w)}}$ | 1 ($\beta$) | 灵活；可校准<br>Flexible; calibratable | 需要实测数据<br>Needs observations |
+| **Polynomial** | 二次方程<br>Quadratic | 0 | 物理基础强<br>Strong physics | 数学复杂<br>Math complex |
+| **AA (Advection-Aridity)** | $E_a = E_w \frac{2E_p - E_w}{E_p}$ | 0 | 适用于平原<br>Good for plains | 对地形敏感<br>Terrain-sensitive |
 
 ---
 
