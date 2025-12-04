@@ -204,7 +204,7 @@ def main():
                 vapor_pressure_deficit=vpd_kpa[i],
                 air_pressure=air_pressure[i]
             )
-        except:
+        except Exception:
             et_true[i] = np.nan
 
     print(f"✓ Generated {len(hours)} hourly data points")
