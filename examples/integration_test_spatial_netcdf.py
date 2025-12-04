@@ -157,7 +157,7 @@ def calculate_et_spatial(ds):
     # In a production environment, this should be optimized with numba or dask
 
     print("  Calculating ET for spatial grid...")
-    nlat, nlon, ntime = temp_k.shape
+    nlon, nlat, ntime = temp_k.shape
 
     for t in range(ntime):
         if (t + 1) % 20 == 0:
