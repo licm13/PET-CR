@@ -277,6 +277,8 @@ def main():
     print("[步骤 2] 保存为 NetCDF 文件...")
 
     output_file = 'data/output/synthetic_spatial_met.nc'
+    import os
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
     ds.to_netcdf(output_file)
 
     print(f"✓ Data saved to: {output_file}")
