@@ -67,6 +67,15 @@ Formula / 公式: R_specific = R_universal / M_air
 where R_universal = 8.314462618 J/(mol·K) and M_air = 0.0289647 kg/mol
 """
 
+G = 9.81  # m/s²
+"""重力加速度 / Gravitational acceleration [m/s²]
+
+Standard value / 标准值: 9.81 m/s²
+Used in aerodynamic and micrometeorological calculations.
+用于空气动力学和微气象学计算。
+Source / 来源: ISO 80000-3:2019
+"""
+
 EPSILON_MOLWEIGHT = 0.62198  # dimensionless
 """水汽与干空气的分子量比 / Ratio of molecular weight of water vapor to dry air
 
@@ -137,6 +146,14 @@ PENMAN_WIND_COEFF = 208.0  # s/m
 Formula / 公式: r_a = 208 / u_2
 where u_2 is wind speed at 2m height / 其中 u_2 是2米高度风速
 Source / 来源: FAO-56, simplified form for reference grass
+"""
+
+KARMAN = 0.41  # dimensionless
+"""Von Kármán常数 / Von Kármán constant
+
+Used in aerodynamic resistance calculations for sub-daily ET models.
+用于亚日程ET模型中的空气动力学阻抗计算。
+Source / 来源: Standard value in micrometeorology
 """
 
 # ============================================================================
@@ -255,6 +272,7 @@ __all__ = [
     
     # Gas constants / 气体常数
     'R_SPECIFIC_DRY_AIR',
+    'G',
     'EPSILON_MOLWEIGHT',
     
     # Density constants / 密度常数
@@ -270,6 +288,7 @@ __all__ = [
     # Empirical coefficients / 经验系数
     'PRIESTLEY_TAYLOR_ALPHA',
     'PENMAN_WIND_COEFF',
+    'KARMAN',
     
     # Unit conversion factors / 单位转换因子
     'W_TO_MJ_PER_DAY',
